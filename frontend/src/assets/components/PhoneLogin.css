@@ -1,0 +1,244 @@
+/* src/assets/components/PhoneLogin.css */
+
+/* Page container */
+.phone-login-page {
+  display: flex;
+  min-height: 80vh;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(180deg, #ffffff, #f6f7fb);
+  font-family: "Inter", "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: #0f172a;
+}
+.phone-row{
+  display: flex;
+  align-items: center;
+  border: 2px solid #ededed98;
+  border-radius: 15px;
+}
+/* Card */
+.phone-login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(44, 59, 80, 0.08);
+  padding: 28px;
+  box-sizing: border-box;
+  border: 1px solid rgba(15, 23, 42, 0.03);
+}
+
+/* Title */
+.login-title {
+  margin: 0 0 12px 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: left;
+}
+
+/* Visually hidden (screen reader only) */
+.sr-only {
+  position: absolute !important;
+  height: 1px; width: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
+}
+
+/* Inputs */
+.name-input,
+.phone-input,
+.otp-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e6e9ef;
+  background: #fff;
+  outline: none;
+  font-size: 0.98rem;
+  color: #0f172a;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.name-input:focus,
+.phone-input:focus,
+.otp-input:focus {
+  border-color: #262421;
+  box-shadow: 0 0 0 6px rgba(38, 36, 33, 0.04);
+}
+
+/* Phone wrapper: prefix + input */
+.phone-wrapper {
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  border: 1px solid #e6e9ef;
+  height: 44px;
+  background: #fff;
+}
+
+.phone-prefix {
+  padding: 0 12px;
+  background: #fafafa;
+  color: #374151;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  border-right: 1px solid #f0f0f0;
+  height: 100%;
+  user-select: none;
+  font-size: 0.95rem;
+}
+
+.phone-input {
+  margin: 0 !important;
+  border: none;
+  padding: 10px 12px;
+  flex: 1;
+  font-size: 0.98rem;
+  background: transparent;
+  outline: none;
+}
+
+/* Buttons (primary, verify, secondary) */
+.send-btn,
+.verify-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.08s ease, opacity 0.12s ease, box-shadow 0.08s ease;
+  background: linear-gradient(90deg,#a88441,#c29f5b);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.send-btn:hover,
+.verify-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(38,36,33,0.06);
+}
+
+.send-btn:disabled,
+.verify-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Secondary button (outline) */
+.secondary-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(38, 36, 33, 0.08);
+  background: transparent;
+  color: #262421;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* OTP instruction text */
+.otp-instruction {
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 0.95rem;
+}
+
+/* OTP actions layout (verify + start over) */
+.otp-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* Small spinner used inside buttons */
+.btn-spinner {
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid #fff;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+/* For any larger spinner variants */
+.spinner {
+  border: 3px solid rgba(0,0,0,0.08);
+  border-top: 3px solid #262421;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
+
+/* Done box (after successful login) */
+.done-box {
+  text-align: center;
+  padding: 12px;
+  background: #f8fffa;
+  border: 1px solid rgba(34,197,94,0.12);
+  color: #065f46;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+/* misc note text */
+.login-note {
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .phone-login-card {
+    padding: 18px;
+    margin: 0 8px;
+  }
+  .otp-actions {
+    grid-template-columns: 1fr;
+  }
+  .phone-login-page {
+    padding: 1rem;
+  }
+}
+
+/* Accessibility: focus ring for keyboard users */
+.send-btn:focus,
+.verify-btn:focus,
+.secondary-btn:focus,
+.name-input:focus,
+.phone-input:focus,
+.otp-input:focus {
+  outline: 3px solid rgba(38,36,33,0.06);
+  outline-offset: 2px;
+}
+
+/* Disabled states for inputs */
+.name-input:disabled,
+.phone-input:disabled,
+.otp-input:disabled {
+  background: #fafafa;
+  opacity: 0.9;
+}

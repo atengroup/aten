@@ -1,0 +1,187 @@
+:root{
+  --gold-1:#a88441;
+  --gold-2:#c29f5b;
+  --bg-1:#fffefc;
+  --bg-2:#faf7f2;
+  --accent:#4b3718;
+  --muted:#6b5a42;
+  --surface:#efe6d0;
+}
+.test-page{
+    min-height: 100vh;
+}
+.testimonial-submit-container.improved{
+  max-width:780px;
+
+  margin:48px auto;
+  padding:28px;
+  background:linear-gradient(180deg,var(--bg-1) 0%, var(--bg-2) 100%);
+  border-radius:14px;
+  border:1px solid var(--surface);
+  box-shadow:0 18px 48px rgba(168,132,65,0.09);
+  font-family:Inter, system-ui;
+  color:#21303a;
+}
+
+.card-head{ text-align:center; margin-bottom:6px; border-bottom:1px solid rgba(230,217,186,0.7); padding-bottom:12px; }
+.card-head h2{ font-size:28px; font-weight:800; color:var(--accent); margin:6px 0 }
+.card-head .subtitle{ color:var(--muted); margin-top:4px }
+
+/* Two-column layout */
+.testimonial-form{
+  margin-top:20px;
+  display:flex;
+  flex-direction: column;
+  gap: 25px;
+  align-items:normal;
+}
+.testimonial-form input, .testimonial-form textarea, .testimonial-form button{
+  margin-top: 10px;
+}
+.testimonial-form label{
+  grid-column:1/2;
+  align-self:center;
+  font-weight:700;
+  color:var(--accent);
+  padding-top:8px;
+}
+
+.testimonial-form input,
+.testimonial-form textarea,
+.file-input-row{
+  grid-column:2/3;
+}
+
+.testimonial-form input,
+.testimonial-form textarea{
+  padding:12px 14px;
+  border-radius:10px;
+  border:1px solid #e6d9ba;
+  background:#fff;
+  font-size:15px;
+  color:#21303a;
+  width:100%;
+  box-sizing:border-box;
+}
+
+.testimonial-form input:focus,
+.testimonial-form textarea:focus{
+  border-color:var(--gold-1);
+  box-shadow:0 10px 28px rgba(168,132,65,0.10);
+  outline:none;
+}
+
+.testimonial-form textarea{
+  min-height:110px;
+  resize:vertical;
+}
+
+.form-row{
+  display:flex;
+  gap:12px;
+}
+.form-row > div{ flex:1 }
+
+.rating-wrap{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.rating-wrap input{
+  width:84px;
+}
+.rating-hint{
+  color:var(--muted);
+  font-size:13px;
+}
+
+/* File upload */
+.file-input-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.file-input-row input[type=file]{ display:none }
+
+.upload-btn-gold{
+  background: linear-gradient(90deg,var(--gold-1),var(--gold-2));
+  color:#fff;
+  padding:10px 18px;
+  border-radius:10px;
+  font-weight:700;
+  cursor:pointer;
+  font-size:14px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  box-shadow:0 10px 30px rgba(168,132,65,0.22);
+  border:none;
+}
+
+.upload-btn-gold.disabled{
+  opacity:0.7;
+  cursor:default;
+}
+
+.preview-block{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.testimonial-upload-preview{
+  width:86px;
+  height:86px;
+  border-radius:12px;
+  object-fit:cover;
+  border:1px solid #e6d9ba;
+  box-shadow:0 10px 26px rgba(168,132,65,0.13);
+}
+.remove-image{
+  background:none;
+  border:1px solid #e6d9ba;
+  padding:6px 8px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:700;
+}
+.preview-placeholder{
+  color:var(--muted);
+  font-size:13px;
+}
+
+.actions-row{
+  grid-column:1/3;
+  display:flex;
+  justify-content:flex-end;
+  margin-top:6px;
+}
+
+.submit-btn{
+  padding:12px 18px;
+  background:linear-gradient(90deg,var(--gold-1),var(--gold-2));
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  font-weight:800;
+  cursor:pointer;
+  font-size:15px;
+  box-shadow:0 10px 30px rgba(162,138,64,0.22);
+}
+
+.submit-btn:disabled{
+  opacity:0.6;
+  cursor:default;
+}
+
+/* Responsive */
+@media (max-width:760px){
+  .testimonial-submit-container.improved{ padding:18px; }
+  .testimonial-form{ grid-template-columns:1fr; }
+  .testimonial-form label{ margin-bottom:6px; }
+  .file-input-row,
+  .testimonial-form input,
+  .testimonial-form textarea{
+    grid-column:1/2;
+  }
+  .actions-row{ grid-column:1/2; justify-content:stretch; }
+}

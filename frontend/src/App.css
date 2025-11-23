@@ -1,0 +1,20 @@
+/* --- Prevent any page horizontal overflow --- */
+html, body {
+  overflow-x: hidden !important;
+  width: 100%;
+}
+
+/* --- Any element accidentally overflowing is clipped --- */
+.home-enquiry-page,
+.left-panel,
+.right-panel {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* --- Fix child grid overflow issues --- */
+.option-list,
+.option-card,
+.option-thumb img {
+  max-width: 100% !important;
+}

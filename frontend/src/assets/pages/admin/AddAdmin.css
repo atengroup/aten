@@ -1,0 +1,222 @@
+/* AdminsAdmin.css
+   Styles for src/pages/admin/AdminsAdmin.jsx
+   Scoped classnames used by that component:
+   - .admins-admin-page
+   - .admin-table
+   - .btn / .btn.primary / .btn.ghost / .btn.small / .btn.danger
+   - form + inputs, labels, table, modal-like helpers
+*/
+
+/* Page shell */
+.admins-admin-page {
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #0f1720;
+  padding: 20px;
+  background: #F2E8E4;
+}
+
+/* Heading area */
+.admins-admin-page > div:first-child {
+  margin-bottom: 18px;
+}
+.admins-admin-page h2 {
+  font-size: 20px;
+  margin: 0;
+  font-weight: 800;
+  color: #0b1220;
+}
+
+/* Form area */
+.admins-admin-page section form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  margin-bottom: 8px;
+  background: #fafafa;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 30, 0.04);
+}
+
+.admins-admin-page label {
+  font-size: 12px;
+  color: #334155;
+  margin-bottom: 6px;
+  display: inline-block;
+}
+
+.admins-admin-page input[type="text"],
+.admins-admin-page input[type="email"],
+.admins-admin-page input[type="tel"],
+.admins-admin-page input[type="url"],
+.admins-admin-page select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 30, 0.06);
+  background: #fff;
+  min-width: 220px;
+  outline: none;
+  font-size: 14px;
+  color: #0f1720;
+  box-shadow: none;
+}
+
+.admins-admin-page input[type="text"]:focus,
+.admins-admin-page input[type="email"]:focus,
+.admins-admin-page input[type="tel"]:focus,
+.admins-admin-page select:focus {
+  border-color: rgba(59,130,246,0.8);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.06);
+}
+
+/* Small helper text */
+.admins-admin-page small {
+  display: block;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* Buttons shared */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #0f1720;
+  border: 1px solid rgba(15,23,30,0.06);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.btn:hover { transform: translateY(-1px); transition: transform 120ms ease; }
+
+.btn.primary {
+  background: #0f1720; /* teal-ish */
+  color: #fff;
+  border: none;
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(15,23,30,0.06);
+}
+
+.btn.small {
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.btn.danger,
+.btn.small.danger {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+}
+
+/* Disabled state */
+.btn[disabled],
+button[disabled] {
+  opacity: 0.52;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Table */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(12,18,20,0.04);
+}
+
+.admin-table thead {
+  background: linear-gradient(180deg, #fafafa, #fff);
+  border-bottom: 1px solid rgba(15,23,30,0.04);
+}
+
+.admin-table th, .admin-table td {
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #0f1720;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(15,23,30,0.03);
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(15,23,30,0.02);
+}
+
+/* Small column for actions */
+.admin-table td .btn {
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 880px) {
+  .admins-admin-page section form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admins-admin-page input[type="text"],
+  .admins-admin-page input[type="email"],
+  .admins-admin-page input[type="tel"],
+  .admins-admin-page select {
+    min-width: 100%;
+  }
+
+  .admin-table th, .admin-table td {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .btn { font-size: 13px; padding: 8px 10px; }
+}
+
+/* Utility row / messages */
+.admins-admin-page .notice {
+  padding: 10px 12px;
+  background: #fff7ed;
+  border: 1px solid rgba(245,158,11,0.12);
+  border-radius: 8px;
+  color: #92400e;
+  margin-bottom: 12px;
+}
+
+/* tiny helpers used inline */
+.inline-row { display: flex; gap: 8px; align-items: center; }
+.muted { color: #6b7280; font-size: 13px; }
+
+/* table action group alignment */
+.admin-actions { display:flex; gap:8px; align-items:center; }
+
+/* small icon/text styles inside table */
+.admin-table .small-text {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* Danger button style for delete in table */
+.admin-table .btn.small.danger {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+}
+
+/* Add a light border around the top form block for visual separation */
+.admins-admin-page > section:first-of-type {
+  margin-bottom: 14px;
+}

@@ -1,0 +1,206 @@
+/* PhoneLoginModal.css
+   Import with:
+   import "../assets/components/PhoneLoginModal.css";
+*/
+
+/* ==========================
+   OVERLAY
+   ========================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 14, 19, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 20px;
+  animation: fadeInOverlay 180ms ease-out;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+
+/* ==========================
+   MODAL CARD
+   ========================== */
+.modal {
+  width: 100%;
+  max-width: 460px;
+  min-height: 320px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  padding: 24px 24px 30px 24px;
+  position: relative;
+  transform: translateY(8px);
+  animation: popUp 200ms cubic-bezier(.2,.9,.3,1) forwards;
+}
+
+@keyframes popUp {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
+/* ==========================
+   CLOSE BUTTON
+   ========================== */
+.modal-close {
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  color: #5b5b5b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 120ms ease;
+}
+
+.modal-close:hover {
+  background: rgba(0,0,0,0.05);
+  transform: scale(1.05);
+}
+
+
+/* ==========================
+   MODAL CONTENT (CARD)
+   ========================== */
+.phone-login-card {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* consistent spacing */
+}
+
+
+/* ==========================
+   TITLE
+   ========================== */
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: #222;
+  text-align: left;
+}
+
+
+/* ==========================
+   INPUT FIELDS
+   ========================== */
+.phone-login-card input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.10);
+  font-size: 15px;
+  transition: all 150ms ease;
+}
+
+.phone-login-card input:focus {
+  border-color: #c9a14a;
+  box-shadow: 0 4px 14px rgba(201,161,74,0.15);
+}
+
+
+/* ==========================
+   PHONE ROW
+   ========================== */
+.phone-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.phone-prefix {
+  padding: 11px 10px;
+  background: #f3f4f6;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.07);
+  font-weight: 600;
+}
+
+.phone-input { flex: 1; }
+
+
+/* ==========================
+   BUTTONS (Primary + Secondary)
+   ========================== */
+.send-btn,
+.verify-btn,
+.secondary-btn {
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 150ms ease;
+}
+
+/* Primary button */
+.send-btn,
+.verify-btn {
+  background: linear-gradient(90deg, #c9a14a, #f2d288);
+  color: #fff;
+  box-shadow: 0 10px 18px rgba(201,161,74,0.20);
+}
+
+.send-btn:hover,
+.verify-btn:hover {
+  filter: brightness(1.07);
+}
+
+.send-btn[disabled],
+.verify-btn[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Secondary */
+.secondary-btn {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.15);
+  color: #333;
+}
+
+.secondary-btn:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+
+/* ==========================
+   OTP Section
+   ========================== */
+.otp-instruction {
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.otp-actions {
+  display: flex;
+  gap: 10px;
+}
+
+
+/* ==========================
+   RESPONSIVENESS
+   ========================== */
+@media (max-width: 520px) {
+  .modal {
+    max-width: 94%;
+    padding: 20px;
+  }
+}

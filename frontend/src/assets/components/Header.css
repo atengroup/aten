@@ -1,0 +1,188 @@
+/* Header — restyled to match Catalog (Cool Minimal) */
+
+/* Base navbar */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 5rem;
+  padding: 0 28px;
+  background: linear-gradient(360deg, #0D0D0C, #171717);
+  position: sticky;
+  top: 0;
+  z-index: 5000; /* high so dropdowns attached to navbar can float above the slide panel */
+  box-shadow: 0 4px 18px rgba(0,0,0,0.45);
+}
+
+/* Logo */
+.logo-header {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  border-radius: 8px;
+  padding: 4px;
+  background: transparent;
+}
+
+
+/* Nav links container (desktop) */
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  z-index: 1400; /* keep under navbar but above page content */
+}
+
+/* Link style */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F2E8E4;
+  text-decoration: none;
+  font-weight: 600;
+  margin-top: 0.1rem;
+  padding: 5px;
+  text-align: center;
+  border-radius: 10px;
+  transition: background 180ms ease, color 150ms ease, transform 120ms ease;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+.nav-links a:hover { transform: translateY(-1px); }
+
+/* Action buttons */
+.login-btn, .logout-btn {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #c5b9a7;
+  color: #0D0D0C;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 1rem;
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+  box-shadow: 0 6px 18px rgba(47,75,90,0.06);
+}
+.login-btn:hover, .logout-btn:hover { transform: translateY(-1px); background: #BFADA3; }
+
+/* Auth area */
+.auth { display:flex; align-items:center; gap:14px; }
+
+/* Username */
+.user-section { display:flex; align-items:center; gap:10px; color: #e8dac8;; }
+.username { font-weight:700; color: #e8dac8;; font-size:0.95rem; }
+
+/* Hamburger (mobile) */
+.hamburger {
+  display: none;
+  width: 40px;
+  height: 28px;
+  flex-direction: column;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5200; /* above nav-links so it remains clickable */
+  padding: 6px;
+  background: transparent;
+  border-radius: 6px;
+  border: none;
+}
+.whatsapp { height: 2.2rem; margin-right:8px; }
+.whatsapp-no { display:flex; justify-content:center; align-items:center; }
+.hamburger span {
+  display:block; height:3px; width:100%; background-color: #e8dac8;; border-radius:4px;
+  transition: all 240ms cubic-bezier(.2,.9,.2,1);
+}
+.hamburger.active span:nth-child(1){ transform: rotate(45deg) translate(8.5px,5px); }
+.hamburger.active span:nth-child(2){ opacity:0; transform: translateX(-6px); }
+.hamburger.active span:nth-child(3){ transform: rotate(-45deg) translate(5px,-1.5px); }
+
+/* Overlay shown when mobile panel is open. Sits under panel but above page content */
+.nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 1350; /* under the panel (1400) but above page */
+  transition: opacity 220ms ease;
+  opacity: 0;
+}
+.nav-overlay.open { display:block; opacity: 1; }
+.contents-nav{
+  display: flex;
+align-items: center;
+gap: 15px;
+}
+/* Mobile nav panel (slide-in) */
+@media (max-width: 768px) {
+  .hamburger { display:flex; flex-direction: column; gap: 5px; }
+.contents-nav{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 50px;
+}
+  .nav-links {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: auto;
+    height: 100vh;
+    width: 320px;
+    background: #000000;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 22px;
+    gap: 18px;
+    transform: translateX(110%);
+    transition: transform 320ms cubic-bezier(.2,.9,.2,1);
+    box-shadow: -8px 0 28px rgba(0,0,0,0.35);
+    border-left: 1px solid rgba(255,255,255,0.02);
+    z-index: 1401; /* above overlay */
+  }
+
+  .nav-links.open { transform: translateX(0); padding-top: 10px; }
+
+  .nav-links a { display:inline-block; padding:12px 14px; font-size:1.05rem; color: #e8dac8;; border-radius:10px; }
+
+  .mobile-auth {
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(242,213,187,0.06);
+    display:block;
+  }
+
+  .login-btn, .logout-btn {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
+    margin-left: 0;
+  background: #c5b9a7;
+    border: 1px solid rgba(255,255,255,0.04);
+    color: #0D0D0C;
+    box-shadow: none;
+  }
+
+  .user-section { flex-direction: column; align-items:flex-start; gap:6px; }
+  .username { color: #e8dac8;; font-weight:700; }
+}
+
+/* Small screens adjustments */
+@media (max-width: 420px) {
+  .navbar { padding: 0 14px; }
+  .logo-header { height:46px; }
+  .nav-links { gap:12px; width:92%; }
+}
+
+/* Accessibility focus */
+.nav-links a:focus, .login-btn:focus, .logout-btn:focus, .hamburger:focus {
+  outline: 3px solid rgba(106,166,201,0.14);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* dropdown helpers (if you keep a floating dropdown elsewhere) */
+.header-dropdown, .user-dropdown { position: relative; z-index: 6000; }

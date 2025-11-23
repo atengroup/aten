@@ -19,37 +19,37 @@ const SERVICES = [
     id: "full-home",
     title: "Full Home Furnishing",
     subtitle: "Complete interiors for every room",
-    img: "./public/bedroom1.jpg",
+    img: "./bedroom1.jpg",
     path: "/home",
   },
   {
     id: "kitchen",
     title: "Kitchen Makeover",
     subtitle: "Smart kitchens that cook up joy",
-    img: "./public/kitchen1.jpg",
+    img: "./kitchen1.jpg",
     path: "/kitchen",
   },
   {
     id: "bathroom",
     title: "Bathroom Renovation",
     subtitle: "Luxury & smart wetspaces",
-    img: "./public/bathroom1.jpg",
+    img: "./bathroom1.jpg",
     path: "/bathroom",
   },
   {
     id: "wardrobe",
     title: "Wardrobe",
     subtitle: "Elegant storage solutions",
-    img: "./public/wardrobe.jpg",
+    img: "./wardrobe.jpg",
     path: "/wardrobe",
   },
 ];
 
 const TRUST_PERKS = [
-  { id: 1, title: "Design Experts", desc: "In-house designers & architects", icon: "./public/businessman.png" },
-  { id: 2, title: "End-to-end Delivery", desc: "From design to execution", icon: "./public/message.png" },
-  { id: 3, title: "Quality Materials", desc: "Premium sourced materials", icon: "./public/quality.png" },
-  { id: 4, title: "Transparent Pricing", desc: "No hidden costs", icon: "./public/price-tag.png" },
+  { id: 1, title: "Design Experts", desc: "In-house designers & architects", icon: "./businessman.png" },
+  { id: 2, title: "End-to-end Delivery", desc: "From design to execution", icon: "./message.png" },
+  { id: 3, title: "Quality Materials", desc: "Premium sourced materials", icon: "./quality.png" },
+  { id: 4, title: "Transparent Pricing", desc: "No hidden costs", icon: "./price-tag.png" },
 ];
 
 const INSPIRATIONS = [
@@ -99,7 +99,7 @@ export default function InterioHome() {
   const HERO_SLIDES = [
     {
       id: "hero-1",
-      img: "./public/bedroom1.jpg",
+      img: "./bedroom1.jpg",
       title: "Design your dream home",
       subtitle: "End-to-end full-home furnishing with curated interiors",
       ctas: [
@@ -109,7 +109,7 @@ export default function InterioHome() {
     },
     {
       id: "hero-2",
-      img: "./public/bedroom2.jpg",
+      img: "./bedroom2.jpg",
       title: "Give your kitchen a fresh life",
       subtitle: "Smart layouts, durable finishes and smart storage",
       ctas: [
@@ -119,7 +119,7 @@ export default function InterioHome() {
     },
     {
       id: "hero-3",
-      img: "./public/commercial.jpg",
+      img: "./commercial.jpg",
       title: "Commercial Interiors",
       subtitle: "Offices | Retail | Hospitality spaces designed to impress",
       ctas: [

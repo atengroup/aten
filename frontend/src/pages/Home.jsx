@@ -118,14 +118,8 @@ export default function Home() {
     <div className={styles.homePage}>
       <header className={styles.homeHero}>
         <div className={styles.heroInner}>
-          <h1 className={styles.heroTitle}>Design. Build. Thrive.</h1>
-          <p className={styles.heroSub}>
-            Integrated solutions across Interiors, Realty and Engineering —
-            crafted for modern living and lasting value.
-          </p><br />
-          <p className={styles.heroSub}>
-            Whatsapp Us on 9988776654
-          </p>
+          <h1 className={styles.heroTitle}>Find it. Design it. Build it.</h1>
+          <h2>Seamlessly with Aten Group.</h2><br />
         </div>
       </header>
 
@@ -155,16 +149,17 @@ export default function Home() {
           <div className={styles.aboutContent}>
             <h2>About Aten</h2>
             <p>
-              We bring together design, property expertise and engineering rigor to
-              deliver spaces people love. From conceptual design to final handover,
-              our integrated approach ensures aesthetics, performance and value.
+             Aten Group delivers integrated interior design, real estate broking, and engineering & construction consultancy services. We align design insight, property expertise, and engineering precision to provide efficient, reliable, and value-driven solutions.
             </p>
-            <ul className={styles.aboutList}>
-              <li><strong>Design-led:</strong> Human-centred interiors that fit your lifestyle.</li>
-              <li><strong>Market-smart:</strong> Realty solutions tailored to local markets.</li>
-              <li><strong>Built to last:</strong> Engineering practices focused on durability.</li>
-            </ul>
-            <Link to="/about" className={`${styles.btnPrimary} ${styles.small}`}>Learn more</Link>
+            <p>
+           With a unified workflow—spanning property search, modern interior design, and structural planning & construction—we ensure seamless project execution and long-term performance.
+            </p>
+            <p>
+             
+Design-led: Practical, modern interior design tailored to your lifestyle.
+Market-smart: Professional real estate advisory supported by transparent guidance.
+Built to last: Durable, efficient engineering and construction practices focused on quality.
+            </p>
           </div>
         </div>
       </section>

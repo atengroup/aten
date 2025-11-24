@@ -19,10 +19,10 @@ export default function Footer() {
           <div>
             <h3 className={styles.brandTitle}>ATEN</h3>
             <p className={styles.brandTag}>Interio • Realty • Engineering</p><br/>
-            <p className={styles.brandTag}>Ph: 9988776654</p>
-            <p className={styles.brandTag}>Whatsapp: 9988776654</p>
-            <p className={styles.brandTag}>Address: 123/AB, XYZ Lane,</p>
-            <p className={styles.brandTag}>Howrah, West Bengal, 7000XX</p>
+            <p className={styles.brandTag}>Ph: +91 99036 11999</p>
+            <p className={styles.brandTag}>Whatsapp: +91 99036 11999</p>
+            <p className={styles.brandTag}>Address: 17A ,Gomes Lane, </p>
+            <p className={styles.brandTag}>Opposite NRS Hospital Gate No.2, Kolkata-700014</p>
           </div>
         </div>
 

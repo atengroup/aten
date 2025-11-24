@@ -8,6 +8,7 @@
   background: linear-gradient(180deg, var(--dark), var(--dark));
   color: var(--muted);
   padding: 40px 20px 20px;
+
   box-shadow: var(--shadow, 0 8px 24px rgba(0,7,45,0.12));
   border-top: 1px solid var(--border, rgba(255,255,255,0.04));
 }
@@ -26,8 +27,8 @@
 /* Brand area */
 .footerBrand {
   display: flex;
+  align-items: start;
   gap: 14px;
-  align-items: center;
 }
 
 .brandImage {
@@ -112,7 +113,7 @@
 /* Bottom text */
 .footerBottom {
   text-align: center;
-  margin-top: 30px;
+  margin-top: 10px;
   padding-top: 14px;
   border-top: 1px solid rgba(255,255,255,0.04);
   color: var(--muted-2);

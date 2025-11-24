@@ -97,7 +97,7 @@ export default function Header() {
           aria-hidden={!menuOpen && window.innerWidth <= 768}
         >
           <Link to="/interio" className={styles.link} onClick={() => closeMenu()}>Interio</Link>
-          <Link to="/properties" className={styles.link} onClick={() => closeMenu()}>Browse Properties</Link>
+          <Link to="/projects" className={styles.link} onClick={() => closeMenu()}>Browse Properties</Link>
 
           <div className={styles.contentsNav}>
             {isAdmin && (

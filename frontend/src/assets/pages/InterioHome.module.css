@@ -262,6 +262,8 @@
 }
 .modal {
   width: 100%;
+  max-height: 80vh;
+  overflow: auto;
   max-width: 720px;
   background: var(--panel-bg, #fff);
   border-radius: 12px;

@@ -18,7 +18,6 @@ const importImages = require("./routes/importImages");
 const enquiries = require("./routes/enquiriesRoute");
 const verifyFirebaseToken = require("./middleware/verifyFirebaseToken");
 const requireAdmin = require("./middleware/requireAdmin");
-const adminsRouter = require("./routes/addAdmin");
 const testimonials = require("./routes/testimonialsRoutes");
 const uploadTestimonialImage = require("./routes/uploadTestimonialImage");
 const wardrobeEnquiryRoutes = require("./routes/wardrobeEnquiryRoutes");
@@ -66,8 +65,8 @@ app.use((req, res, next) => {
 
 /* -------------------- API Routes --------------------- */
 
-app.use("/api/admins", adminsRouter);
-app.use("/api/admin", verifyFirebaseToken, requireAdmin, adminRoutes);
+
+app.use("/api/admin", verifyFirebaseToken, adminRoutes);
 app.use("/api/kb_enquiries", kbEnquiryRoutes);
 app.use("/api/custom_enquiries", customEnquiryRoutes);
 app.use("/auth", authRoutes);

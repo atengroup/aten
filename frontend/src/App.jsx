@@ -4,7 +4,6 @@ import Home from "./pages/Home";
 import HomeEnquiry from "./pages/HomeEnquiry.jsx";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import PhoneLoginModal from "./components/PhoneLogin";
 import { Toaster } from "react-hot-toast";
 import DashboardLayout from "./pages/admin/DashboardLayout";
 import BathroomEnquiry from "./pages/BathroomEnquiry.jsx";
@@ -23,10 +22,14 @@ import SubmitTestimonial from "./pages/SubmitTestimonial.jsx";
 import KitchenEnquiry from "./pages/KitchenEnquiry.jsx";
 import WardrobeEnquiry from "./pages/WardrobeEnquiry.jsx";
 import CustomEnquiry from "./pages/CustomEnquiries.jsx";
+import ScrollToTop from "./ScrollToTop.jsx";
 
 export default function App() {
   return (
-    <Router>
+    <>
+  
+    <Router> 
+       <ScrollToTop />
       <div style={{ background: '#faf9f6'}}>
         <Toaster position="top-center" />
         <Header />
@@ -41,7 +44,7 @@ export default function App() {
           <Route path="/wardrobe" element={<WardrobeEnquiry />} />
           <Route path="/custom" element={<CustomEnquiry />} />
           <Route path="/testimonials" element={<SubmitTestimonial />} />
-          <Route path="/login" element={<PhoneLoginModal />} />
+
 
           {/* --- Realty / Projects section --- */}
           <Route path="/projects" element={<ProjectsList />} />
@@ -67,5 +70,6 @@ export default function App() {
         <Footer />
       </div>
     </Router>
+    </>
   );
 }

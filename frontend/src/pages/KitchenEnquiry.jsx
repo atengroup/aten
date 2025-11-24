@@ -1,13 +1,17 @@
 // src/pages/KitchenEnquiry.jsx
 import React, { useState } from "react";
 import OptionGroup from "../components/OptionGroup";
-import PhoneLoginModal from "../components/PhoneLoginModal";
 import styles from "../assets/pages/HomeEnquiry.module.css";
-const BACKEND_BASE =
-  import.meta.env.VITE_BACKEND_BASE ||
-  (typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:5000"
-    : "");
+import EmailLoginModal from "../components/EmailLoginModal";
+
+const RAW_BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE || "";
+const BACKEND_BASE = RAW_BACKEND_BASE.replace(/\/+$/, ""); // strip trailing slash
+function buildUrl(path) {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  if (!BACKEND_BASE) return p;
+  return `${BACKEND_BASE}${p}`.replace(/([^:]\/)\/+/g, "$1");
+}
+
 const KITCHEN_TYPES = [
   { id: "modular", label: "Modular Kitchen", image: "/kitchen1.jpg", bullets: ["Fully customizable", "Optimized storage"] },
   { id: "semi-modular", label: "Semi Modular Kitchen", image: "/kitchen1.jpg", bullets: [" Customizable", "Optimized storage"] }
@@ -24,44 +28,96 @@ const KITCHEN_THEMES = [
 export default function KitchenEnquiry() {
   const [selectedKitchenType, setSelectedKitchenType] = useState(null);
   const [selectedKitchenTheme, setSelectedKitchenTheme] = useState(null);
-  const [form, setForm] = useState({ email: "", city: "", area: "" });
+
+  // removed email from form state — email will be taken from logged-in user
+  const [form, setForm] = useState({ city: "", area: "" });
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
 
-  function handleFormChange(e) { const { name, value } = e.target; setForm((s) => ({ ...s, [name]: value })); }
-  function findLabel(list, id) { const f = list.find((i) => i.id === id); return f ? f.label : id; }
+  function handleFormChange(e) {
+    const { name, value } = e.target;
+    setForm((s) => ({ ...s, [name]: value }));
+  }
 
-  async function doSubmit(userId = null) {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    const uid = userId || storedUser.id || null;
-    const payload = { user_id: uid, type: "kitchen", email: form.email || null, city: form.city || null, area: form.area || null, kitchen_type: selectedKitchenType ? findLabel(KITCHEN_TYPES, selectedKitchenType) : null, kitchen_theme: selectedKitchenTheme ? findLabel(KITCHEN_THEMES, selectedKitchenTheme) : null };
+  function findLabel(list, id) {
+    const f = list.find((i) => i.id === id);
+    return f ? f.label : id;
+  }
+
+  // doSubmit accepts optional userId (UUID) or userObj; if not provided it reads from localStorage
+  async function doSubmit(userId = null, userObj = null) {
+    const storedUser = userObj || JSON.parse(localStorage.getItem("user") || "null") || JSON.parse(localStorage.getItem("user") || "{}");
+    const uid = userId || (storedUser && (storedUser.id || storedUser.uid)) || null;
+    const email = (storedUser && storedUser.email) || null;
+
+    const payload = {
+      user_id: uid,
+      email: email,
+      type: "kitchen",
+      city: form.city || null,
+      area: form.area || null,
+      kitchen_type: selectedKitchenType ? findLabel(KITCHEN_TYPES, selectedKitchenType) : null,
+      kitchen_theme: selectedKitchenTheme ? findLabel(KITCHEN_THEMES, selectedKitchenTheme) : null,
+    };
+
     try {
-      setLoading(true); setMessage(null);
-      const res = await fetch("${BACKEND_BASE}/api/kb_enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Server error");
+      setLoading(true);
+      setMessage(null);
+
+      const url = buildUrl("/api/kb_enquiries");
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || "Server error");
+
       setMessage({ type: "success", text: "Kitchen enquiry saved successfully" });
-      setForm({ email: "", city: "", area: "" });
-      setSelectedKitchenType(null); setSelectedKitchenTheme(null);
-    } catch (err) { console.error(err); setMessage({ type: "error", text: err.message || "Submit failed" }); }
-    finally { setLoading(false); setPendingSubmit(false); }
+      // reset only the fields that are part of the form (email removed)
+      setForm({ city: "", area: "" });
+      setSelectedKitchenType(null);
+      setSelectedKitchenTheme(null);
+    } catch (err) {
+      console.error("doSubmit error:", err);
+      setMessage({ type: "error", text: err?.message || "Submit failed" });
+    } finally {
+      setLoading(false);
+      setPendingSubmit(false);
+    }
   }
 
   async function handleSubmit(e) {
-    e && e.preventDefault(); setMessage(null);
-    if (!form.email || form.email.trim() === "") { setMessage({ type: "error", text: "Email is required" }); return; }
+    e && e.preventDefault();
+    setMessage(null);
+
+    // email removed from UI. We require login to attach user email/user_id.
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = storedUser.id || null;
-    if (!userId) { setPendingSubmit(true); setShowLoginModal(true); return; }
-    await doSubmit(userId);
+
+    if (!userId) {
+      setPendingSubmit(true);
+      setShowLoginModal(true);
+      return;
+    }
+
+    await doSubmit(userId, storedUser);
   }
 
   function handleLoginSuccess(userObj = null) {
     setShowLoginModal(false);
-    const userId = userObj?.id || JSON.parse(localStorage.getItem("user") || "{}").id || null;
-    if (pendingSubmit) setTimeout(() => doSubmit(userId), 200);
+
+    // prefer userObj returned by modal; otherwise read localStorage
+    const userFromModal = userObj || JSON.parse(localStorage.getItem("user") || "null") || JSON.parse(localStorage.getItem("user") || "{}");
+
+    if (pendingSubmit) {
+      // slight delay to allow login flow to persist to localStorage if necessary
+      setTimeout(() => doSubmit(userFromModal?.id || userFromModal?.uid || null, userFromModal), 200);
+    }
   }
 
   const steps = [{ key: "ktype", label: "Kitchen Type" }, { key: "ktheme", label: "Kitchen Theme" }];
@@ -73,9 +129,15 @@ export default function KitchenEnquiry() {
         <h3>Kitchen Options</h3>
         <div className={styles.progressBar}>
           {steps.map((s, idx) => {
-            const completed = idx < activeStep; const active = idx === activeStep;
+            const completed = idx < activeStep;
+            const active = idx === activeStep;
             return (
-              <button key={s.key} type="button" className={`${styles.step} ${active ? styles.stepActive : completed ? styles.stepCompleted : ""}`} onClick={() => setActiveStep(idx)}>
+              <button
+                key={s.key}
+                type="button"
+                className={`${styles.step} ${active ? styles.stepActive : completed ? styles.stepCompleted : ""}`}
+                onClick={() => setActiveStep(idx)}
+              >
                 <div className={styles.stepIndex}>{idx + 1}</div>
                 <div>{s.label}</div>
               </button>
@@ -84,12 +146,20 @@ export default function KitchenEnquiry() {
         </div>
 
         <div className="option-stage">
-          {activeStep === 0 && <OptionGroup title="Kitchen Type" options={KITCHEN_TYPES} multi={false} selected={selectedKitchenType} onChange={setSelectedKitchenType} />}
-          {activeStep === 1 && <OptionGroup title="Kitchen Theme" options={KITCHEN_THEMES} multi={false} selected={selectedKitchenTheme} onChange={setSelectedKitchenTheme} />}
+          {activeStep === 0 && (
+            <OptionGroup title="Kitchen Type" options={KITCHEN_TYPES} multi={false} selected={selectedKitchenType} onChange={setSelectedKitchenType} />
+          )}
+          {activeStep === 1 && (
+            <OptionGroup title="Kitchen Theme" options={KITCHEN_THEMES} multi={false} selected={selectedKitchenTheme} onChange={setSelectedKitchenTheme} />
+          )}
 
           <div className={styles.stepNav}>
-            <button type="button" className={styles.navBtn} onClick={() => setActiveStep((s) => Math.max(0, s - 1))} disabled={activeStep === 0}>Previous</button>
-            <button type="button" className={styles.navBtn} onClick={() => setActiveStep((s) => Math.min(steps.length - 1, s + 1))} disabled={activeStep === steps.length - 1}>Next</button>
+            <button type="button" className={styles.navBtn} onClick={() => setActiveStep((s) => Math.max(0, s - 1))} disabled={activeStep === 0}>
+              Previous
+            </button>
+            <button type="button" className={styles.navBtn} onClick={() => setActiveStep((s) => Math.min(steps.length - 1, s + 1))} disabled={activeStep === steps.length - 1}>
+              Next
+            </button>
           </div>
         </div>
       </div>
@@ -97,10 +167,7 @@ export default function KitchenEnquiry() {
       <div className={styles.rightPanel}>
         <h2>Kitchen Enquiry</h2>
         <form className={styles.enquiryForm} onSubmit={handleSubmit}>
-          <label>
-            Email *
-            <input name="email" value={form.email} onChange={handleFormChange} type="email" placeholder="you@example.com" />
-          </label>
+          {/* Email removed from UI — will be taken from logged-in user and sent in payload */}
 
           <label>
             City
@@ -118,14 +185,28 @@ export default function KitchenEnquiry() {
           </div>
 
           <div style={{ marginTop: 12 }}>
-            <button type="submit" className={styles.submitBtn} disabled={loading}>{loading ? "Saving..." : "Submit Enquiry"}</button>
+            <button type="submit" className={styles.submitBtn} disabled={loading}>
+              {loading ? "Saving..." : "Submit Enquiry"}
+            </button>
           </div>
 
-          {message && <div className={`${styles.formMessage} ${message.type === "error" ? styles.formMessageError : styles.formMessageSuccess}`} style={{ marginTop: 12 }}>{message.text}</div>}
+          {message && (
+            <div className={`${styles.formMessage} ${message.type === "error" ? styles.formMessageError : styles.formMessageSuccess}`} style={{ marginTop: 12 }}>
+              {message.text}
+            </div>
+          )}
         </form>
       </div>
 
-      {showLoginModal && <PhoneLoginModal onClose={() => { setShowLoginModal(false); setPendingSubmit(false); }} onSuccess={handleLoginSuccess} />}
+      {showLoginModal && (
+        <EmailLoginModal
+          onClose={() => {
+            setShowLoginModal(false);
+            setPendingSubmit(false);
+          }}
+          onSuccess={handleLoginSuccess}
+        />
+      )}
     </div>
   );
 }

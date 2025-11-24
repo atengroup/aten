@@ -2,14 +2,20 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import OptionGroup from "../components/OptionGroup";
+import EmailLoginModal from "../components/EmailLoginModal";
 import styles from "../assets/pages/HomeEnquiry.module.css";
 import toast from "react-hot-toast";
 import Dropdown from "../components/Dropdown";
-const BACKEND_BASE =
-  import.meta.env.VITE_BACKEND_BASE ||
-  (typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:5000"
-    : "");
+
+// Vite backend base (safe handling)
+const RAW_BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE || "";
+const BACKEND_BASE = RAW_BACKEND_BASE.replace(/\/+$/, ""); // strip trailing slash
+function buildUrl(path) {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  if (!BACKEND_BASE) return p;
+  return `${BACKEND_BASE}${p}`.replace(/([^:]\/)\/+/g, "$1");
+}
+
 const THEMES = [
   { id: "modern", label: "Modern", image: "/bathroom1.jpg", bullets: ["Clean lines", "Neutral palette"] },
   { id: "minimal", label: "Minimal", image: "/bathroom1.jpg", bullets: ["Less is more", "Open spaces"] },
@@ -50,7 +56,8 @@ export default function HomeEnquiry() {
   const [selectedMaterials, setSelectedMaterials] = useState([]);
 
   const [extraBhk, setExtraBhk] = useState("");
-  const [form, setForm] = useState({ email: "", type: "", area: "", bathroom_number: "", city: "" });
+  // removed email from form state (email will be taken from logged-in user)
+  const [form, setForm] = useState({ type: "", area: "", bathroom_number: "", city: "" });
 
   useEffect(() => {
     if (preSelectedType) {
@@ -64,6 +71,9 @@ export default function HomeEnquiry() {
   }, [preSelectedType]);
 
   const [loading, setLoading] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
+
   const steps = [
     { key: "theme", label: "Theme" },
     { key: "kitchen", label: "Kitchen type" },
@@ -84,12 +94,9 @@ export default function HomeEnquiry() {
   function goNext() { setActiveStep((s) => Math.min(steps.length - 1, s + 1)); }
   function goPrev() { setActiveStep((s) => Math.max(0, s - 1)); }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!form.email.trim()) {
-      toast.error("Please enter email");
-      return;
-    }
+  // doSubmit accepts optional userId (UUID). If not provided, it will attempt to read it from localStorage.
+  async function doSubmit(userId = null) {
+    // validate 4+ BHK case
     let finalType = form.type;
     if (form.type === "4+ BHK") {
       if (!extraBhk.trim()) {
@@ -99,13 +106,15 @@ export default function HomeEnquiry() {
       finalType = `${extraBhk}BHK`;
     }
 
-    const userObj = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = userObj.id || null;
+    // fallback to stored user if userId not provided
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const finalUserId = userId || storedUser.id || null;
+    const finalEmail = storedUser.email || null;
 
     const payload = {
-      user_id: userId,
-      email: form.email,
-      city: form.city,
+      user_id: finalUserId,
+      email: finalEmail,
+      city: form.city || null,
       type: finalType,
       bathroom_number: form.bathroom_number || null,
       kitchen_type: selectedKitchen ? findLabel(KITCHENS, selectedKitchen) : null,
@@ -116,20 +125,61 @@ export default function HomeEnquiry() {
 
     try {
       setLoading(true);
-      const res = await fetch("${BACKEND_BASE}/api/enquiries", {
+      const url = buildUrl("/api/enquiries");
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Server error");
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `Server error (${res.status})`);
+
       toast.success("Enquiry submitted!");
-      setForm({ email: "", type: "", area: "", bathroom_number: "", city: "" });
-      setSelectedTheme(null); setSelectedKitchen(null); setSelectedMaterials([]); setExtraBhk("");
+      // reset form (email removed so not clearing it)
+      setForm({ type: "", area: "", bathroom_number: "", city: "" });
+      setSelectedTheme(null);
+      setSelectedKitchen(null);
+      setSelectedMaterials([]);
+      setExtraBhk("");
     } catch (err) {
-      toast.error("Failed to submit enquiry");
+      console.error("submit error:", err);
+      toast.error(err?.message || "Failed to submit enquiry");
     } finally {
       setLoading(false);
+      setPendingSubmit(false);
+    }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    // email field removed — no longer required from UI
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = storedUser.id || null;
+
+    if (!userId) {
+      // not logged in -> prompt login modal and remember to submit after login
+      setPendingSubmit(true);
+      setShowLoginModal(true);
+      return;
+    }
+
+    await doSubmit(userId);
+  }
+
+  // Called by EmailLoginModal when login completes successfully.
+  // The modal may pass back the server user object (userObj) — if it does we use it directly,
+  // otherwise we read localStorage (login flow persists server user there).
+  function handleLoginSuccess(userObj = null) {
+    setShowLoginModal(false);
+
+    // prefer the user object passed by modal; fallback to localStorage
+    const userId =
+      (userObj && (userObj.id || userObj.uid)) ? (userObj.id || userObj.uid) :
+      (JSON.parse(localStorage.getItem("user") || "{}").id || null);
+
+    if (pendingSubmit) {
+      // tiny delay to allow login flow to finish persisting (defensive)
+      setTimeout(() => doSubmit(userId), 200);
     }
   }
 
@@ -168,8 +218,8 @@ export default function HomeEnquiry() {
           )}
 
           <div className={styles.stepNav}>
-            <button type="button" className={styles.navBtn} onClick={goPrev} disabled={activeStep === 0}>Previous</button>
-            <button type="button" className={styles.navBtn} onClick={goNext} disabled={activeStep === steps.length - 1}>Next</button>
+            <button type="button" className={styles.navBtn} onClick={() => goPrev()} disabled={activeStep === 0}>Previous</button>
+            <button type="button" className={styles.navBtn} onClick={() => goNext()} disabled={activeStep === steps.length - 1}>Next</button>
           </div>
         </div>
       </div>
@@ -177,10 +227,7 @@ export default function HomeEnquiry() {
       <div className={styles.rightPanel}>
         <h2>Home Enquiry</h2>
         <form className={styles.enquiryForm} onSubmit={handleSubmit}>
-          <label>
-            Email *
-            <input name="email" value={form.email} onChange={handleFormChange} type="email" placeholder="you@example.com" />
-          </label>
+          {/* Email removed from UI — will be taken from logged-in user */}
 
           <label>
             Type *
@@ -228,6 +275,13 @@ export default function HomeEnquiry() {
           </div>
         </form>
       </div>
+
+      {showLoginModal && (
+        <EmailLoginModal
+          onClose={() => { setShowLoginModal(false); setPendingSubmit(false); }}
+          onSuccess={handleLoginSuccess}
+        />
+      )}
     </div>
   );
 }

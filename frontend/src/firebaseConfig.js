@@ -3,13 +3,13 @@ import { initializeApp } from "firebase/app";
 import { getAuth, RecaptchaVerifier } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCdgGT-4UEpUBDsNBWAf8qdN2FHPOsw2v8",
-  authDomain: "a10interio-server.firebaseapp.com",
-  projectId: "a10interio-server",
-  storageBucket: "a10interio-server.firebasestorage.app",
-  messagingSenderId: "149525149447",
-  appId: "1:149525149447:web:0aa6db86ed25cbd52c37a2",
-  measurementId: "G-3G3ZKTXJVW"
+  apiKey: "AIzaSyCceYBppUrS_9H1Sk9suyuLo8NC_B8BYgk",
+  authDomain: "aten-2c512.firebaseapp.com",
+  projectId: "aten-2c512",
+  storageBucket: "aten-2c512.firebasestorage.app",
+  messagingSenderId: "830832445422",
+  appId: "1:830832445422:web:e96928b01aec30021b70ff",
+  measurementId: "G-2GKVYGHR8J"
 };
 
 const app = initializeApp(firebaseConfig);

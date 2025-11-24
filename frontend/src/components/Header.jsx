@@ -1,7 +1,9 @@
+// src/components/Header.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import styles from "../assets/components/Header.module.css";
+import EmailLoginModal from "./EmailLoginModal";
 
 /*
   Optional: Put logo assets in public/
@@ -17,8 +19,15 @@ export default function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const hamburgerRef = useRef(null);
-  const users = JSON.parse(localStorage.getItem("user"));
+  const users = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user"));
+    } catch (e) {
+      return null;
+    }
+  })();
   const isAdmin = users?.isAdmin;
   const closeMenu = () => setMenuOpen(false);
 
@@ -97,16 +106,23 @@ export default function Header() {
               </Link>
             )}
 
-            <Link to="/" className={styles.whatsappLink} onClick={() => closeMenu()}>
-              <span className={styles.whatsappNo}>9903611999</span>
-            </Link>
-
             <div className={styles.mobileAuth}>
               {!user ? (
-                <button onClick={() => handleNavClick("/login")} className={styles.loginBtn}>Login</button>
+                // OPEN AUTH MODAL instead of navigating to /login
+                <button
+                  onClick={() => {
+                    setAuthModalOpen(true);
+                    closeMenu();
+                  }}
+                  className={styles.loginBtn}
+                >
+                  Login
+                </button>
               ) : (
                 <div className={`${styles.userSection} ${styles.headerDropdown}`}>
-                  <span className={styles.username}>Hi, {user?.name || user?.displayName || "User"}</span>
+                  <span className={styles.username}>
+                    Hi, {user?.name || user?.displayName || "User"}
+                  </span>
                   <button onClick={handleLogout} className={styles.logoutBtn}>Logout</button>
                 </div>
               )}
@@ -120,6 +136,20 @@ export default function Header() {
         onClick={() => closeMenu()}
         aria-hidden={!menuOpen}
       />
+
+      {/* Auth modal: open when authModalOpen === true */}
+      {authModalOpen && (
+        <EmailLoginModal
+          onClose={() => setAuthModalOpen(false)}
+          onSuccess={() => {
+            // Modal already calls loginWithFirebaseIdToken and updates backend.
+            // Close the modal and optionally navigate or refresh UI.
+            setAuthModalOpen(false);
+            closeMenu();
+            // no navigate required — user state will update via useAuth
+          }}
+        />
+      )}
     </>
   );
 }

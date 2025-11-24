@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import styles from "../assets/pages/SubmitTestimonial.module.css";
 import Dropdown from "../components/Dropdown";
+import EmailLoginModal from "../components/EmailLoginModal";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const BACKEND_BASE =
@@ -34,6 +35,9 @@ export default function SubmitTestimonial() {
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const fileRef = useRef(null);
+
+  // Email login modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   function extractPhoneFromObject(obj) {
     if (!obj || typeof obj !== "object") return "";
@@ -299,8 +303,50 @@ export default function SubmitTestimonial() {
   const needLogin = !customerPhone;
   const serviceTypeLocked = Boolean(editingId);
 
+  // Open the Email login modal instead of navigating away
   const handleQuickLogin = () => {
-    navigate("/login", { state: { from: location } });
+    setShowEmailModal(true);
+  };
+
+  // Called by EmailLoginModal when login succeeds. Accept either a string or an object.
+  const onEmailLoginSuccess = (result) => {
+    // result might be a string phone, or an object with phone fields
+    let phone = "";
+    if (!result) phone = "";
+    else if (typeof result === "string") phone = result;
+    else if (typeof result === "object") {
+      phone =
+        result.customer_phone ||
+        result.phone ||
+        result.phoneNumber ||
+        result.phone_number ||
+        result.mobile ||
+        result.msisdn ||
+        "";
+    }
+
+    if (phone) {
+      const trimmed = String(phone).trim();
+      try { localStorage.setItem("customer_phone", trimmed); } catch (e) {}
+      setCustomerPhone(trimmed);
+      setForm((s) => ({ ...s, customer_phone: trimmed }));
+
+    } else {
+      // fallback: try to allow EmailLoginModal to save to localStorage itself; re-check
+      const p = getSavedCustomerPhone();
+      if (p) {
+        setCustomerPhone(p);
+        setForm((s) => ({ ...s, customer_phone: p }));
+
+      } else {
+        toast.success("Login successful");
+      }
+    }
+    setShowEmailModal(false);
+  };
+
+  const onEmailLoginClose = () => {
+    setShowEmailModal(false);
   };
 
   const previewSrc = preview || DEV_FALLBACK_IMAGE;
@@ -315,7 +361,7 @@ export default function SubmitTestimonial() {
 
         {needLogin && (
           <div className={styles.loginPrompt}>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", justifyContent:"center" , gap: 8 }}>
               <button className={styles.uploadBtn} onClick={handleQuickLogin}>
                 Quick login
               </button>
@@ -456,6 +502,16 @@ export default function SubmitTestimonial() {
           </form>
         )}
       </div>
+
+      {/* Email login modal */}
+      {showEmailModal && (
+        <EmailLoginModal
+          onClose={onEmailLoginClose}
+          onSuccess={onEmailLoginSuccess}
+          // optional: pass the `from` location so modal can redirect back if it performs navigate internally
+          initialRedirectState={{ from: location }}
+        />
+      )}
     </div>
   );
 }

@@ -140,14 +140,39 @@
 .heroGhost { background: rgba(255,255,255,0.95); color: var(--accent); }
 
 /* hero controls */
+/* HERO CONTROLS — FIXED CENTERED OUTSIDE */
 .heroControls {
   position: absolute;
-  bottom: 18px;
-  right: 18px;
-  z-index: 4;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 10;
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
+  width: 100%;
+  pointer-events: none; /* arrows clickable but layout clean */
 }
+
+.heroControls .ctrl {
+  pointer-events: auto;
+  background: transparent;
+  border-radius: 8px;
+  padding: 10px 14px;
+  border: none;
+  cursor: pointer;
+  font-size: 80px;
+  color: var(--muted);
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* optional: pull arrows slightly OUTSIDE the slide */
+
+
 .ctrl {
   background: rgba(255,255,255,0.95);
   border-radius: 8px;
@@ -477,8 +502,10 @@
   text-decoration: none;
   background: var(--dark);
   color: var(--btn-text);
-  padding: 8px;
-  border-radius: var(--panel-radius);
+  padding: 9px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
 }
 /* tidy up small screens */
 @media (max-width: 880px) {

@@ -79,7 +79,7 @@ export default function InterioHome() {
         const interio = arr.filter((it) => {
           if (!it) return false;
           if (it.page === "interio") return true;
-          if (it.service_type && String(it.service_type).toLowerCase().includes("interio")) return true;
+          if (it.service_type && String(it.service_type).toLowerCase().includes("interio")) return false;
           return isInterioItem(it);
         });
         if (!mounted) return;

@@ -1,0 +1,317 @@
+/* Home.module.css
+   Uses global variables from :root (defined once in your theme file).
+   Assumes your global :root contains:
+     --accent, --dark, --dark-2, --muted, --muted-2, --btn-bg, --btn-text, --glass, --shadow
+*/
+
+.homePage {
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: var(--dark); /* page-level text uses dark navy */
+  line-height: 1.5;
+  background: #fff;
+}
+
+/* Panel card utility */
+.panelCard {
+  background: var(--panel-bg, #ffffff); /* fallback to white if not defined globally */
+  border: 1px solid var(--panel-border, rgba(0,7,45,0.04));
+  border-radius: 10px;
+  padding: 26px;
+  margin: 20px auto;
+  box-shadow: var(--soft-shadow, 0 12px 36px rgba(1,6,30,0.12));
+  max-width: 90%;
+}
+
+/* ---------- Hero ---------- */
+.homeHero {
+  /* Brand gradient hero (red -> navy). Overlay image sits under header if you used the header blur trick. */
+  background:
+    linear-gradient(180deg, var(--accent), rgba(0,7,45,0.80));
+  background-size: cover;
+  background-position: center;
+  color: var(--btn-text, #fff);
+
+  /* pulled up under the header (ensure --navbar-height is used by header) */
+  margin-top: calc(-1 * var(--navbar-height, 5rem));
+  padding-top: calc(64px + var(--navbar-height, 5rem));
+  min-height: 350px;
+  padding-bottom: 64px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.heroInner {
+  max-width: 980px;
+  margin: 0 auto;
+}
+.heroTitle {
+  margin: 0 0 8px 0;
+  font-size: 2rem;
+  letter-spacing: -0.6px;
+  font-weight: 800;
+  color: var(--btn-text, #fff);
+}
+.heroSub {
+  margin: 0;
+  opacity: 0.95;
+  font-size: 1.05rem;
+  max-width: 820px;
+  margin-left: auto;
+  margin-right: auto;
+  color: rgba(255,255,255,0.92);
+}
+
+/* ---------- Services grid ---------- */
+.serviceGridSection {
+  padding: 28px 18px 8px;
+}
+.serviceGrid {
+  max-width: 90%;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.serviceCards {
+  position: relative;
+  height: 340px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  text-decoration: none;
+  color: var(--btn-text, #fff);
+  box-shadow: 0 8px 30px rgba(0,7,45,0.06);
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+  background-size: cover;
+  background-position: center;
+}
+.serviceCards:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 48px rgba(1,6,30,0.14);
+}
+
+.serviceOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(217,43,58,0.06) 0%,
+    rgba(0,7,45,0.72) 80%
+  );
+  z-index: 1;
+  transition: background 0.28s ease;
+}
+
+.serviceContent {
+  position: relative;
+  z-index: 2;
+  padding: 22px;
+  width: 100%;
+  text-align: left;
+  backdrop-filter: blur(0.6px);
+}
+
+.serviceTitle {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+  color: var(--btn-text, #fff);
+}
+
+.serviceDesc {
+  font-weight: 400;
+  margin-bottom: 14px;
+  color: rgba(255,255,255,0.92);
+  max-width: 78%;
+}
+
+.serviceCta {
+  display: inline-block;
+  margin-top: 6px;
+  background: rgba(255,255,255,0.08);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--btn-text, #fff);
+  transition: background 180ms ease, box-shadow 180ms ease;
+}
+.serviceCta:hover {
+  background: linear-gradient(90deg, var(--accent), rgba(217,43,58,0.85));
+  box-shadow: 0 8px 20px var(--cta-glow, rgba(217,43,58,0.16));
+}
+
+/* ---------- About Section ---------- */
+.aboutInner {
+  display: flex;
+  padding: 10px;
+  gap: 2rem;
+  min-height: 100%;
+}
+.aboutMedia {
+  width: 70%;
+  height: 300px;
+  background-size: cover;
+  background-position: center;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,7,45,0.08);
+}
+.aboutContent h2 { margin-top: 0; color: var(--dark); }
+.aboutContent p { color: #50555a; margin-bottom: 12px; }
+.aboutList { list-style: none; padding: 0; margin: 0 0 14px 0; }
+.aboutList li { margin-bottom: 8px; color: #4a3e2e; }
+
+.btnPrimary {
+  display: inline-block;
+  background: linear-gradient(90deg, var(--accent), #c71d2a);
+  color: var(--btn-text);
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
+}
+.btnPrimary.small { padding: 8px 12px; font-size: 0.92rem; }
+
+/* ---------- Testimonials ---------- */
+.testimonialsSection { position: relative; }
+.testimonialsTrackWrap {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding-bottom: 6px;
+}
+
+.testimonialsTrack {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.testimonialsTrack::-webkit-scrollbar { display: none; }
+
+.testimonialCard {
+  margin: 0;
+  background: var(--panel-bg, #fff);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 5px 10px 10px rgba(1,6,30,0.06);
+  border: 1px solid rgba(0,7,45,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 160px;
+  flex: 0 0 320px;
+}
+
+.testimonialMedia {
+  width: 100%;
+  height: 160px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: none;
+  margin-bottom: 8px;
+}
+.testimonialMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.testimonialCard blockquote {
+  margin: 0;
+  font-size: 13px;
+  color: #222;
+  line-height: 1.4;
+}
+.testimonialCard figcaption {
+  font-size: 12px;
+  color: #444;
+  gap: 4px;
+}
+
+.testimonialRating { display: flex; gap: 2px; margin-top: 2px; }
+.testimonialRating svg { width: 10px; height: 10px; }
+
+/* arrow buttons */
+.testimonialArrow {
+  background: var(--btn-text, #fff);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+  color: var(--dark);
+}
+.testimonialArrow:hover { transform: translateY(-1px); }
+
+.testimonialsSection h2 { margin-bottom: 0; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1000px) {
+  .serviceGrid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .aboutInner { display: flex; flex-direction: column; gap: 1rem; align-items: stretch; }
+  .serviceCards { height: 300px; }
+  .aboutMedia { width: 100%; height: 260px; }
+}
+
+@media (max-width: 640px) {
+  .serviceGrid { grid-template-columns: 1fr; gap: 12px; padding: 0 12px; max-width: calc(100% - 24px); }
+  .serviceCards { height: 220px; border-radius: 10px; }
+  .homeHero {   margin-top: calc(-1 * var(--navbar-height, 5rem));
+  padding-top: calc(64px + var(--navbar-height, 5rem));
+  min-height: 350px; }
+  .heroTitle { font-size: 1.5rem; line-height: 1.15; }
+  .heroSub { font-size: 0.95rem; max-width: 94%; }
+  .aboutInner { display: flex; flex-direction: column; gap: 12px; padding: 8px 6px; }
+  .aboutMedia { width: 100%; height: 200px; min-height: 160px; object-fit: cover; }
+  .aboutContent { padding: 0 6px; }
+  .panelCard { padding: 16px; margin: 14px auto; max-width: 96%; }
+  .serviceContent { padding: 14px; }
+  .testimonialsTrack { padding: 8px 6px; gap: 10px; }
+  .testimonialCard { flex: 0 0 82%; min-height: 160px; padding: 12px; border-radius: 10px; }
+  .testimonialMedia { height: 140px; border-radius: 8px; }
+  .testimonialCard blockquote { font-size: 13px; }
+  .testimonialCard figcaption { font-size: 12px; }
+  .testimonialArrow { padding: 6px 8px; font-size: 18px; }
+}
+
+@media (max-width: 480px) {
+  .serviceCards { height: 200px; }
+  .heroTitle { font-size: 1.35rem; }
+  .heroSub { font-size: 0.9rem; }
+  .aboutMedia { height: 180px; }
+  .aboutContent p { font-size: 0.95rem; }
+  .testimonialMedia { height: 120px; }
+  .testimonialCard { flex: 0 0 88%; padding: 10px; min-height: 150px; }
+  .serviceDesc { font-size: 0.92rem; max-width: 100%; }
+  .serviceContent { padding: 12px; }
+   .homeHero {   margin-top: calc(-1 * var(--navbar-height, 5rem));
+  padding-top: calc(64px + var(--navbar-height, 5rem));
+  min-height: 350px; }
+}
+
+@media (max-width: 420px) {
+  .serviceCards { height: 180px; border-radius: 8px; }
+   .homeHero {   margin-top: calc(-1 * var(--navbar-height, 5rem));
+  padding-top: calc(64px + var(--navbar-height, 5rem));
+  min-height: 350px; }
+  .heroTitle { font-size: 1.25rem; }
+  .heroSub { font-size: 0.85rem; }
+  .aboutMedia { height: 160px; }
+  .aboutList li { font-size: 0.94rem; }
+  .testimonialMedia { height: 110px; }
+  .testimonialCard { flex: 0 0 92%; min-height: 140px; padding: 10px; }
+  .testimonialCard blockquote { font-size: 12.5px; }
+  .serviceCta { padding: 6px 8px; font-size: 0.82rem; }
+  .btnPrimary.small { padding: 7px 10px; font-size: 0.88rem; }
+}

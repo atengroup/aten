@@ -23,7 +23,7 @@ function isImageName(name) {
  * Returns: [{ path, name, signedUrl }, ...]
  * Signed URLs expire after SIGN_EXPIRES seconds.
  */
-router.get("/", verifyFirebaseToken, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const collected = [];
     let offset = 0;
@@ -46,30 +46,17 @@ router.get("/", verifyFirebaseToken, async (req, res) => {
         if (item.type && item.type !== "file") continue;
         if (!isImageName(item.name)) continue;
 
-        const pathInBucket = item.name; // if you store in subfolders, this includes the path
-        // create signed URL
-        const { data: signedData, error: signErr } = await supabase
-          .storage
-          .from(BUCKET)
-          .createSignedUrl(pathInBucket, SIGN_EXPIRES);
+        const pathInBucket = item.name; // includes subfolder if stored with folder
+        // Try to get publicUrl (works for public buckets)
+        const { data: pubData } = supabase.storage.from(BUCKET).getPublicUrl(pathInBucket);
+        const publicUrl = pubData && pubData.publicUrl ? pubData.publicUrl : null;
 
-        if (signErr) {
-          console.warn("Failed to create signed URL for", pathInBucket, signErr);
-          // fallback: try public URL (will be unusable if bucket is private), but include path for debugging
-          const { data: pubData } = supabase.storage.from(BUCKET).getPublicUrl(pathInBucket);
-          collected.push({
-            path: pathInBucket,
-            name: item.name,
-            signedUrl: signedData?.signedUrl || pubData?.publicUrl || null,
-            signedUrlError: signErr.message || String(signErr),
-          });
-        } else {
-          collected.push({
-            path: pathInBucket,
-            name: item.name,
-            signedUrl: signedData.signedUrl,
-          });
-        }
+        // Push url (public) and path for client-side canonicalization
+        collected.push({
+          path: pathInBucket,
+          name: item.name,
+          url: publicUrl, // may be null for private buckets
+        });
       }
 
       if (data.length < pageSize) break;
@@ -82,5 +69,7 @@ router.get("/", verifyFirebaseToken, async (req, res) => {
     return res.status(500).json({ error: "Server error while listing uploads" });
   }
 });
+
+module.exports = router;
 
 module.exports = router;

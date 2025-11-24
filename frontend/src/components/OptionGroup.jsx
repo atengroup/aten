@@ -1,5 +1,6 @@
+// src/components/OptionGroup.jsx
 import React from "react";
-import "../assets/pages/HomeEnquiry.css"; // shared styles (keeps small footprint)
+import styles from "../assets/pages/HomeEnquiry.module.css";
 
 /**
  * Props:
@@ -35,54 +36,58 @@ export default function OptionGroup({ title, options = [], multi = false, select
   }
 
   return (
-    <div className="option-group-card">
-      <div className="option-group-header">
-        <h4>{title}</h4>
-        <div className="selected-chips">
+    <div className={styles.optionGroupCard || ""}>
+      <div className={styles.optionGroupHeader || ""} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <h4 style={{ margin: 0 }}>{title}</h4>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {/* render pills */}
           {multi
             ? (Array.isArray(selected) ? selected : []).map((sid) => {
                 const opt = options.find((o) => o.id === sid);
                 return (
-                  <span key={sid} className="chip">
+                  <span key={sid} className={styles.chip}>
                     {opt ? opt.label : sid}
-                    <button type="button" className="chip-remove" onClick={() => removeChip(sid)}>×</button>
+                    <button type="button" className={styles.chipRemove} onClick={() => removeChip(sid)}>×</button>
                   </span>
                 );
               })
             : selected && (() => {
                 const opt = options.find((o) => o.id === selected);
                 return opt ? (
-                  <span className="chip" key={opt.id}>
+                  <span className={styles.chip} key={opt.id}>
                     {opt.label}
-                    <button type="button" className="chip-remove" onClick={() => removeChip(opt.id)}>×</button>
+                    <button type="button" className={styles.chipRemove} onClick={() => removeChip(opt.id)}>×</button>
                   </span>
                 ) : null;
               })()}
         </div>
       </div>
 
-      <div className="option-list">
-        {options.map((opt) => (
-          <button
-            key={opt.id}
-            type="button"
-            className={"option-card " + (isSelected(opt.id) ? "selected" : "")}
-            onClick={() => toggle(opt.id)}
-          >
-            <div className="option-thumb">
-              <img src={opt.image || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='60'><rect width='100%' height='100%' fill='%23f3f4f6'/></svg>"} alt={opt.label} />
-            </div>
-            <div className="option-body">
-              <div className="option-title">{opt.label}</div>
-              <ul className="option-bullets">
-                {(opt.bullets || []).slice(0, 2).map((b, i) => (
-                  <li key={i}>{b}</li>
-                ))}
-              </ul>
-            </div>
-          </button>
-        ))}
+      <div className={styles.optionList}>
+        {options.map((opt) => {
+          const sel = isSelected(opt.id);
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              className={`${styles.optionCard} ${sel ? styles.optionCardSelected : ""}`}
+              onClick={() => toggle(opt.id)}
+            >
+              <div className={styles.optionThumb}>
+                <img src={opt.image || `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%23f3f4f6'/></svg>`} alt={opt.label} />
+              </div>
+
+              <div className={styles.optionBody}>
+                <div className={styles.optionTitle}>{opt.label}</div>
+                <ul className={styles.optionBullets}>
+                  {(opt.bullets || []).slice(0, 2).map((b, i) => (
+                    <li key={i}>{b}</li>
+                  ))}
+                </ul>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

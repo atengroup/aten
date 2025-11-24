@@ -3,14 +3,20 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebaseConfig";
-import "../../assets/pages/admin/ImportProjects.css";
+import styles from "../../assets/pages/admin/ImportProjects.module.css";
+
+/**
+ * DEV_FALLBACK_IMAGE:
+ * The uploaded file path you provided earlier. Use this as a dev fallback asset.
+ * (Your dev tooling will transform /mnt/data/... to a served URL during testing)
+ */
+const DEV_FALLBACK_IMAGE = "/mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png";
 
 const BACKEND_BASE =
   import.meta.env.VITE_BACKEND_BASE ||
   (typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "http://localhost:5000"
     : "");
-
 
 // ---- Helpers to get auth token safely ----
 async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
@@ -21,7 +27,7 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
     try {
       const l = localStorage.getItem("auth_token");
       if (l && l !== "null" && l !== "") return l;
-    } catch (e) { /* ignore storage access errors */ }
+    } catch (e) {}
     return null;
   };
 
@@ -33,26 +39,22 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
     // 2) try Firebase currentUser token if available
     try {
       if (auth && auth.currentUser) {
-        const idToken = await auth.currentUser.getIdToken(false); // don't force refresh first
+        const idToken = await auth.currentUser.getIdToken(false);
         if (idToken) {
-          // cache for future sync
           try { localStorage.setItem("auth_token", idToken); } catch (e) {}
           return idToken;
         }
       }
     } catch (err) {
-      // non-fatal: firebase might not be ready yet
-      // console.warn("getAuthToken: firebase attempt failed", err);
+      // non-fatal
     }
 
-    // wait briefly then retry
     await new Promise((res) => setTimeout(res, intervalMs));
   }
 
-  // final attempt with forced refresh from Firebase (in case cached token is stale)
   try {
     if (auth && auth.currentUser) {
-      const idToken = await auth.currentUser.getIdToken(true); // force refresh
+      const idToken = await auth.currentUser.getIdToken(true);
       if (idToken) {
         try { localStorage.setItem("auth_token", idToken); } catch (e) {}
         try { sessionStorage.setItem("auth_token", idToken); } catch (e) {}
@@ -63,17 +65,15 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
     // ignore
   }
 
-  // nothing found within timeout
   return null;
 }
 
-
-  async function makeHeaders() {
-    const token = await getAuthToken();
-    const headers = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  }
+async function makeHeaders() {
+  const token = await getAuthToken();
+  const headers = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
 
 export default function ImportProjects() {
   const [excelFile, setExcelFile] = useState(null);
@@ -141,7 +141,7 @@ export default function ImportProjects() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `Server ${res.status}`);
       }
-      const j = await res.json();
+      await res.json();
       toast.success(`Uploaded images successfully!`);
       navigate("/admin/projects");
     } catch (err) {
@@ -153,29 +153,29 @@ export default function ImportProjects() {
   };
 
   return (
-    <div className="import-shell">
-      <div className="import-inner">
-        <h2 className="import-title">Import Projects Data & Images</h2>
-        <p className="import-desc">
+    <div className={styles.importShell}>
+      <div className={styles.importInner}>
+        <h2 className={styles.importTitle}>Import Projects Data & Images</h2>
+        <p className={styles.importDesc}>
           Upload project data and gallery images separately. The Excel file
           defines project details, and the ZIP file can contain referenced
           images.
         </p>
 
         {/* --- Excel Import Section --- */}
-        <section className="card import-card">
-          <h3 className="card-title">1️⃣ Import Property Data (Excel)</h3>
+        <section className={styles.card}>
+          <h3 className={styles.cardTitle}>1️⃣ Import Property Data (Excel)</h3>
 
-          <form onSubmit={handleImportExcel} className="form-grid">
-            <div className="file-row">
+          <form onSubmit={handleImportExcel} className={styles.formGrid}>
+            <div className={styles.fileRow}>
               <input
                 id="excelFile"
                 type="file"
                 accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={(e) => setExcelFile(e.target.files[0] || null)}
-                className="native-file"
+                className={styles.nativeFile}
               />
-              <label htmlFor="excelFile" className="file-btn">
+              <label htmlFor="excelFile" className={styles.fileBtn}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path d="M12 2v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M7 7l5-5 5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -183,15 +183,15 @@ export default function ImportProjects() {
                 </svg>
                 Choose Excel
               </label>
-              <div className="file-name">
+              <div className={styles.fileName}>
                 {excelFile ? excelFile.name : <span className="muted">No file selected</span>}
               </div>
             </div>
 
-            <div className="form-actions-row">
+            <div className={styles.formActionsRow}>
               <button
                 type="submit"
-                className="btn primary-btn"
+                className={`${styles.btn} ${styles.primaryBtn}`}
                 disabled={loadingExcel}
               >
                 {loadingExcel ? "Importing..." : "Import Excel"}
@@ -199,7 +199,7 @@ export default function ImportProjects() {
 
               <button
                 type="button"
-                className="btn ghost-btn"
+                className={`${styles.btn} ${styles.ghostBtn}`}
                 onClick={() => navigate("/admin/projects")}
               >
                 Cancel
@@ -207,7 +207,7 @@ export default function ImportProjects() {
             </div>
           </form>
 
-          <div className="notes">
+          <div className={styles.notes}>
             <strong>Notes:</strong>
             <ul>
               <li>First sheet is used.</li>
@@ -220,34 +220,34 @@ export default function ImportProjects() {
         </section>
 
         {/* --- ZIP Import Section --- */}
-        <section className="card import-card">
-          <h3 className="card-title">2️⃣ Import Gallery Images (ZIP)</h3>
+        <section className={styles.card}>
+          <h3 className={styles.cardTitle}>2️⃣ Import Gallery Images (ZIP)</h3>
 
-          <form onSubmit={handleImportZip} className="form-grid">
-            <div className="file-row">
+          <form onSubmit={handleImportZip} className={styles.formGrid}>
+            <div className={styles.fileRow}>
               <input
                 id="zipFile"
                 type="file"
                 accept=".zip,application/zip"
                 onChange={(e) => setZipFile(e.target.files[0] || null)}
-                className="native-file"
+                className={styles.nativeFile}
               />
-              <label htmlFor="zipFile" className="file-btn">
+              <label htmlFor="zipFile" className={styles.fileBtn}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path d="M21 10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 1 1 2-2h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M7 10h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 Choose ZIP
               </label>
-              <div className="file-name">
+              <div className={styles.fileName}>
                 {zipFile ? zipFile.name : <span className="muted">No file selected</span>}
               </div>
             </div>
 
-            <div className="form-actions-row">
+            <div className={styles.formActionsRow}>
               <button
                 type="submit"
-                className="btn"
+                className={`${styles.btn} ${styles.secondaryBtn}`}
                 disabled={loadingZip}
               >
                 {loadingZip ? "Uploading..." : "Upload Images ZIP"}
@@ -255,8 +255,8 @@ export default function ImportProjects() {
             </div>
           </form>
 
-          <div className="notes">
-            <strong>Tip:</strong> If your Excel `gallery` column contains only filenames,
+          <div className={styles.notes}>
+            <strong>Tip:</strong> If your Excel <code>gallery</code> column contains only filenames,
             upload the ZIP with those exact filenames so the importer can link them.
           </div>
         </section>

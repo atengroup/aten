@@ -1,23 +1,14 @@
+// src/components/PhoneLoginModal.jsx
 import React, { useState, useEffect } from "react";
 import { auth, createRecaptchaVerifier } from "../firebaseConfig";
 import { signInWithPhoneNumber, updateProfile } from "firebase/auth";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
-import "../assets/components/PhoneLoginModal.css";
+import styles from "../assets/components/PhoneLoginModal.module.css";
 
-/**
- * PhoneLoginModal
- * Props:
- *  - onClose(): called when modal closes (user cancelled)
- *  - onSuccess(userObj): called after successful login with user object (if available)
- *
- * Behavior:
- *  - Performs phone OTP sign-in using Firebase.
- *  - Calls loginWithFirebaseIdToken(idToken, name) from useAuth.
- *  - After loginWithFirebaseIdToken finishes, tries to read user object from localStorage.
- *    If not present, if loginWithFirebaseIdToken returns a user object (you can implement that),
- *    we forward that user object via onSuccess.
- */
+// uploaded dev fallback image (path from your session)
+const DEV_FALLBACK_IMAGE = "/mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png";
+
 export default function PhoneLoginModal({ onClose, onSuccess }) {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
@@ -104,27 +95,21 @@ export default function PhoneLoginModal({ onClose, onSuccess }) {
         if (typeof window !== "undefined") window.__CUSTOMER_PHONE__ = normalizedPhone;
       }
 
-      // call auth context to exchange token with backend and persist user
-      // IMPORTANT: loginWithFirebaseIdToken should ideally persist a `user` object to localStorage.
-      // If you change it to return the user object, we will forward it via onSuccess.
+      // exchange token with backend via auth context
       let maybeUser = null;
       try {
         const ret = await loginWithFirebaseIdToken(idToken, trimmedName || null);
-        // if your loginWithFirebaseIdToken returns the user object, capture it
-        if (ret && typeof ret === "object" && (ret.id || ret.uid)) {
-          maybeUser = ret;
-        }
+        if (ret && typeof ret === "object" && (ret.id || ret.uid)) maybeUser = ret;
       } catch (err) {
         console.warn("loginWithFirebaseIdToken failed:", err);
       }
 
-      // final attempt to read user from localStorage
-      const userObjLocal = JSON.parse(localStorage.getItem("user") || "{}");
-      const finalUser = userObjLocal && userObjLocal.id ? userObjLocal : maybeUser;
+      // try to read user from localStorage
+      const userObjLocal = JSON.parse(localStorage.getItem("user") || "null");
+      const finalUser = userObjLocal && (userObjLocal.id || userObjLocal.uid) ? userObjLocal : maybeUser;
 
       toast.success("Logged in");
 
-      // notify parent
       if (onSuccess) onSuccess(finalUser || null);
       if (onClose) onClose();
     } catch (err) {
@@ -144,18 +129,18 @@ export default function PhoneLoginModal({ onClose, onSuccess }) {
   }
 
   return (
-    <div className="modal-overlay">
-      <div className="modal" role="dialog" aria-modal="true">
+    <div className={styles.modalOverlay}>
+      <div className={styles.modal} role="dialog" aria-modal="true">
         <button
-          className="modal-close"
+          className={styles.modalClose}
           aria-label="Close sign in"
           onClick={() => { if (onClose) onClose(); }}
         >
           ×
         </button>
 
-        <div className="phone-login-card">
-          <h2 className="login-title">Sign in with phone</h2>
+        <div className={styles.phoneLoginCard}>
+          <h2 className={styles.loginTitle}>Sign in with phone</h2>
 
           {step === "input" && (
             <>
@@ -168,8 +153,8 @@ export default function PhoneLoginModal({ onClose, onSuccess }) {
                 autoFocus
               />
 
-              <div className="phone-row">
-                <div className="phone-prefix">+91</div>
+              <div className={styles.phoneRow}>
+                <div className={styles.phonePrefix}>+91</div>
                 <input
                   id="phone"
                   className="phone-input"
@@ -180,7 +165,12 @@ export default function PhoneLoginModal({ onClose, onSuccess }) {
                 />
               </div>
 
-              <button className="send-btn" onClick={sendOtp} disabled={loading}>
+              <button
+                className={styles.sendBtn}
+                onClick={sendOtp}
+                disabled={loading}
+                type="button"
+              >
                 {loading ? "Sending..." : "Send OTP"}
               </button>
             </>
@@ -188,7 +178,7 @@ export default function PhoneLoginModal({ onClose, onSuccess }) {
 
           {step === "otp" && (
             <>
-              <div className="otp-instruction">OTP sent to <strong>{phone}</strong></div>
+              <div className={styles.otpInstruction}>OTP sent to <strong>{phone}</strong></div>
 
               <input
                 id="otp"
@@ -199,11 +189,21 @@ export default function PhoneLoginModal({ onClose, onSuccess }) {
                 inputMode="numeric"
               />
 
-              <div className="otp-actions">
-                <button className="verify-btn" onClick={verifyOtp} disabled={loading}>
+              <div className={styles.otpActions}>
+                <button
+                  className={styles.verifyBtn}
+                  onClick={verifyOtp}
+                  disabled={loading}
+                  type="button"
+                >
                   {loading ? "Verifying..." : "Verify & Sign in"}
                 </button>
-                <button className="secondary-btn" onClick={resetAll} disabled={loading}>
+                <button
+                  className={styles.secondaryBtn}
+                  onClick={resetAll}
+                  disabled={loading}
+                  type="button"
+                >
                   Start over
                 </button>
               </div>

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import "../../assets/pages/admin/ProjectsAdmin.css";
+import styles from "../../assets/pages/admin/ProjectsAdmin.module.css";
 import showDeleteConfirm from "../../components/ConfirmDeleteToast";
 import { auth } from "../../firebaseConfig";
 
@@ -12,63 +12,53 @@ const BACKEND_BASE =
     ? "http://localhost:5000"
     : "");
 
+// fallback dev image (uploaded asset)
+const DEV_FALLBACK_IMAGE = "/mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png";
+
 function safeParse(arrOrStr) {
   if (!arrOrStr) return [];
   if (Array.isArray(arrOrStr)) return arrOrStr;
   try { return JSON.parse(arrOrStr); } catch { return []; }
 }
 
-// ---- Helpers to get auth token safely (copied/adapted from ImportProjects.jsx) ----
 async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
   const start = Date.now();
-
-  // small helper to read storages safely
   const readStored = () => {
     try {
       const l = localStorage.getItem("auth_token");
       if (l && l !== "null" && l !== "") return l;
-    } catch (e) { /* ignore storage access errors */ }
+    } catch (e) {}
     return null;
   };
 
   while (Date.now() - start < timeoutMs) {
-    // 1) quick check storages
     const stored = readStored();
     if (stored) return stored;
 
-    // 2) try Firebase currentUser token if available
     try {
       if (auth && auth.currentUser) {
-        const idToken = await auth.currentUser.getIdToken(false); // don't force refresh first
+        const idToken = await auth.currentUser.getIdToken(false);
         if (idToken) {
-          // cache for future sync
           try { localStorage.setItem("auth_token", idToken); } catch (e) {}
           return idToken;
         }
       }
-    } catch (err) {
-      // non-fatal: firebase might not be ready yet
-    }
+    } catch (err) {}
 
-    // wait briefly then retry
     await new Promise((res) => setTimeout(res, intervalMs));
   }
 
-  // final attempt with forced refresh from Firebase (in case cached token is stale)
   try {
     if (auth && auth.currentUser) {
-      const idToken = await auth.currentUser.getIdToken(true); // force refresh
+      const idToken = await auth.currentUser.getIdToken(true);
       if (idToken) {
         try { localStorage.setItem("auth_token", idToken); } catch (e) {}
         try { sessionStorage.setItem("auth_token", idToken); } catch (e) {}
         return idToken;
       }
     }
-  } catch (err) {
-    // ignore
-  }
+  } catch (err) {}
 
-  // nothing found within timeout
   return null;
 }
 
@@ -82,7 +72,7 @@ async function makeHeaders() {
 export default function ProjectsAdmin() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState([]); // store selected project IDs
+  const [selected, setSelected] = useState([]); // selected project ids
 
   const load = async () => {
     setLoading(true);
@@ -93,12 +83,9 @@ export default function ProjectsAdmin() {
         throw new Error(`Server ${res.status} ${txt}`);
       }
       const data = await res.json();
-      const list = (data.items || []).map((p) => ({
-        ...p,
-        gallery: safeParse(p.gallery),
-      }));
+      const list = (data.items || []).map((p) => ({ ...p, gallery: safeParse(p.gallery) }));
       setItems(list);
-      setSelected([]); // clear selections on reload
+      setSelected([]);
     } catch (err) {
       console.error("Failed to load projects:", err);
       toast.error("Failed to load projects. Check server.");
@@ -114,10 +101,7 @@ export default function ProjectsAdmin() {
     try {
       setLoading(true);
       const headers = await makeHeaders();
-      const res = await fetch(`${BACKEND_BASE}/api/projects/${id}`, {
-        method: "DELETE",
-        headers,
-      });
+      const res = await fetch(`${BACKEND_BASE}/api/projects/${id}`, { method: "DELETE", headers });
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
         throw new Error(`Delete failed ${res.status} ${txt}`);
@@ -136,19 +120,13 @@ export default function ProjectsAdmin() {
     try {
       setLoading(true);
       const headers = await makeHeaders();
-
-      // If your backend supports batch delete endpoint, replace the loop with a single request.
       for (const id of ids) {
-        const res = await fetch(`${BACKEND_BASE}/api/projects/${id}`, {
-          method: "DELETE",
-          headers,
-        });
+        const res = await fetch(`${BACKEND_BASE}/api/projects/${id}`, { method: "DELETE", headers });
         if (!res.ok) {
           const txt = await res.text().catch(() => "");
           throw new Error(`Delete failed for ${id} ${res.status} ${txt}`);
         }
       }
-
       toast.success(`Deleted ${ids.length} project${ids.length > 1 ? "s" : ""}`);
       await load();
     } catch (err) {
@@ -168,6 +146,7 @@ export default function ProjectsAdmin() {
   };
 
   const removeSelected = () => {
+    if (!selected.length) return;
     showDeleteConfirm({
       title: `Delete ${selected.length} selected project${selected.length > 1 ? "s" : ""}?`,
       message: "This will permanently delete all selected projects.",
@@ -176,38 +155,27 @@ export default function ProjectsAdmin() {
   };
 
   const toggleSelect = (id) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const selectAll = () => {
-    if (selected.length === items.length) {
-      setSelected([]); // deselect all
-    } else {
-      setSelected(items.map((i) => i.id)); // select all
-    }
+    if (selected.length === items.length) setSelected([]);
+    else setSelected(items.map((i) => i.id));
   };
 
   return (
-    <div className="admin-projects">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div className={styles.container}>
+      <div className={styles.topBar}>
         <h2>Projects</h2>
-        <div className="buttons" style={{ display: "flex", gap: 10 }}>
-          <Link to="/admin/projects/new" className="btn">Add Project</Link>
-          <Link to="/admin/import" className="btn">Bulk Import</Link>
+        <div className={styles.buttons}>
+          <Link to="/admin/projects/new" className={`${styles.btn} ${styles.btnPrimary}`}>Add Project</Link>
+          <Link to="/admin/import" className={`${styles.btn}`}>Bulk Import</Link>
 
-          {/* 🔴 Bulk Delete button */}
           <button
             onClick={removeSelected}
-            className="btn"
-            style={{
-              background: selected.length > 0 ? "#dc2626" : "#aaa",
-              color: "#fff",
-              fontWeight: 700,
-              cursor: selected.length > 0 ? "pointer" : "not-allowed",
-            }}
+            className={`${styles.btn} ${selected.length > 0 ? styles.btnDanger : styles.btnDisabled}`}
             disabled={selected.length === 0}
+            aria-disabled={selected.length === 0}
           >
             Delete Selected
           </button>
@@ -215,52 +183,67 @@ export default function ProjectsAdmin() {
       </div>
 
       {loading ? (
-        <div style={{ padding: 20 }}>Loading…</div>
+        <div className={styles.emptyState}>Loading…</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: 20, color: "#666" }}>
+        <div className={styles.emptyState}>
           No projects found.
           <div style={{ marginTop: 12 }}>
-            <button onClick={load} className="btn">Reload</button>
+            <button onClick={load} className={`${styles.btn}`}>Reload</button>
           </div>
         </div>
       ) : (
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>
-                <input
-                  type="checkbox"
-                  checked={selected.length === items.length && items.length > 0}
-                  onChange={selectAll}
-                />
-              </th>
-              <th>Title</th>
-              <th>City</th>
-              <th>Slug</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((r) => (
-              <tr key={r.id}>
-                <td>
+        <div className={styles.tableWrap}>
+          <table className={styles.adminTable}>
+            <thead>
+              <tr>
+                <th className={styles.checkboxCell}>
                   <input
                     type="checkbox"
-                    checked={selected.includes(r.id)}
-                    onChange={() => toggleSelect(r.id)}
+                    checked={selected.length === items.length && items.length > 0}
+                    onChange={selectAll}
+                    aria-label="Select all projects"
                   />
-                </td>
-                <td>{r.title}</td>
-                <td>{r.city}</td>
-                <td>{r.slug}</td>
-                <td className="function">
-                  <Link className="edit" to={`/admin/projects/${r.id}`}>Edit</Link>{" | "}
-                  <button className="delete" onClick={() => remove(r.id, r.title)}>Delete</button>
-                </td>
+                </th>
+                <th>Title</th>
+                <th>City</th>
+                <th>Slug</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {items.map((r) => (
+                <tr key={r.id}>
+                  <td className={styles.checkboxCell}>
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(r.id)}
+                      onChange={() => toggleSelect(r.id)}
+                      aria-label={`Select project ${r.title}`}
+                    />
+                  </td>
+
+                  <td>{r.title}</td>
+                  <td>{r.city}</td>
+                  <td>{r.slug}</td>
+
+                  <td className={styles.function}>
+                    <Link className={styles.actionLink} to={`/admin/projects/${r.id}`}>Edit</Link>
+
+                    <button
+                      className={styles.actionDelete}
+                      onClick={() => remove(r.id, r.title)}
+                      aria-label={`Delete project ${r.title}`}
+                      type="button"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

@@ -1,9 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import "../assets/components/Header.css";
+import styles from "../assets/components/Header.module.css";
 
-export default function Navbar() {
+/*
+  Optional: Put logo assets in public/
+    - aten-logo-white.png  (white version)
+    - aten-logo-color.png  (colored version)
+  If you only have one logo, update FALLBACK_LOGO accordingly.
+*/
+const LOGO_WHITE = "/aten-logo-white.png";
+const LOGO_COLOR = "/aten-logo-color.png";
+const FALLBACK_LOGO = "/atenwhitelogo.png";
+
+export default function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -11,6 +21,9 @@ export default function Navbar() {
   const users = JSON.parse(localStorage.getItem("user"));
   const isAdmin = users?.isAdmin;
   const closeMenu = () => setMenuOpen(false);
+
+  // Select logo: prefer white for dark nav; fallback to colored or original.
+  const logoSrc = "/atenlogo.png";
 
   const handleNavClick = (path) => {
     closeMenu();
@@ -52,14 +65,14 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="navbar" role="navigation" aria-label="Main navigation">
-        <Link to="/" onClick={() => closeMenu()}>
-          <img src="/atenwhitelogo.png" alt="aTen Logo" className="logo-header" />
+      <nav className={styles.navbar} role="navigation" aria-label="Main navigation">
+        <Link to="/" onClick={() => closeMenu()} className={styles.logoLink}>
+            <img src={logoSrc} alt="aTen Logo" className={styles.logoHeader} />
         </Link>
-       
+
         <button
           ref={hamburgerRef}
-          className={`hamburger ${menuOpen ? "active" : ""}`}
+          className={`${styles.hamburger} ${menuOpen ? styles.active : ""}`}
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((s) => !s)}
@@ -70,38 +83,40 @@ export default function Navbar() {
           <span />
         </button>
 
-        <div className={`nav-links ${menuOpen ? "open" : ""}`} aria-hidden={!menuOpen && window.innerWidth <= 768}>
+        <div
+          className={`${styles.navLinks} ${menuOpen ? styles.open : ""}`}
+          aria-hidden={!menuOpen && window.innerWidth <= 768}
+        >
+          <Link to="/interio" className={styles.link} onClick={() => closeMenu()}>Interio</Link>
+          <Link to="/properties" className={styles.link} onClick={() => closeMenu()}>Browse Properties</Link>
 
-          <Link to="/interio" className="whatsapp-no">Interio</Link>
-          <Link to="/properties" className="whatsapp-no">Browse Properties</Link>
-
-          <div className="contents-nav"> {isAdmin &&<Link to="/admin" onClick={() => closeMenu()}>
-            <span className="whatsapp-no">Admin</span>
-          </Link>}
-          <Link to="/" onClick={() => closeMenu()}>
-            <img className="whatsapp" src="/whatsapp.png" alt="WhatsApp" />
-            <span className="whatsapp-no">9903611999</span>
-          </Link>
-
-          {/* other desktop links (visible on desktop) */}
-          {/* <Link to="/browse" onClick={() => closeMenu()}>Browse</Link> */}
-
-          <div className="mobile-auth">
-            {!user ? (
-              <button onClick={() => handleNavClick("/login")} className="login-btn">Login</button>
-            ) : (
-              <div className="user-section header-dropdown">
-                <span className="username">Hi, {user?.name || user?.displayName || "User"}</span>
-                <button onClick={handleLogout} className="logout-btn">Logout</button>
-              </div>
+          <div className={styles.contentsNav}>
+            {isAdmin && (
+              <Link to="/admin" className={styles.link} onClick={() => closeMenu()}>
+                <span>Admin</span>
+              </Link>
             )}
-          </div></div>
+
+            <Link to="/" className={styles.whatsappLink} onClick={() => closeMenu()}>
+              <span className={styles.whatsappNo}>9903611999</span>
+            </Link>
+
+            <div className={styles.mobileAuth}>
+              {!user ? (
+                <button onClick={() => handleNavClick("/login")} className={styles.loginBtn}>Login</button>
+              ) : (
+                <div className={`${styles.userSection} ${styles.headerDropdown}`}>
+                  <span className={styles.username}>Hi, {user?.name || user?.displayName || "User"}</span>
+                  <button onClick={handleLogout} className={styles.logoutBtn}>Logout</button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </nav>
 
-      {/* overlay: sits under panel and closes it on click */}
       <div
-        className={`nav-overlay ${menuOpen ? "open" : ""}`}
+        className={`${styles.navOverlay} ${menuOpen ? styles.open : ""}`}
         onClick={() => closeMenu()}
         aria-hidden={!menuOpen}
       />

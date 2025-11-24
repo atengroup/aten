@@ -1,12 +1,11 @@
-/* PhoneLoginModal.css
-   Import with:
-   import "../assets/components/PhoneLoginModal.css";
+/* PhoneLoginModal.module.css
+   Uses global theme variables from :root (do NOT redeclare them here).
 */
 
 /* ==========================
    OVERLAY
    ========================== */
-.modal-overlay {
+.modalOverlay {
   position: fixed;
   inset: 0;
   background: rgba(12, 14, 19, 0.55);
@@ -24,7 +23,6 @@
   to   { opacity: 1; }
 }
 
-
 /* ==========================
    MODAL CARD
    ========================== */
@@ -33,12 +31,13 @@
   max-width: 460px;
   min-height: 320px;
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--panel-bg, #ffffff);
   box-shadow: 0 20px 60px rgba(0,0,0,0.35);
   padding: 24px 24px 30px 24px;
   position: relative;
   transform: translateY(8px);
   animation: popUp 200ms cubic-bezier(.2,.9,.3,1) forwards;
+  border: 1px solid var(--panel-border, rgba(0,0,0,0.06));
 }
 
 @keyframes popUp {
@@ -46,11 +45,10 @@
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-
 /* ==========================
    CLOSE BUTTON
    ========================== */
-.modal-close {
+.modalClose {
   position: absolute;
   right: 14px;
   top: 12px;
@@ -61,88 +59,87 @@
   background: transparent;
   font-size: 22px;
   cursor: pointer;
-  color: #5b5b5b;
+  color: var(--muted-2, #5b5b5b);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 120ms ease;
+  transition: transform 120ms ease, background 120ms ease;
 }
 
-.modal-close:hover {
+.modalClose:hover {
   background: rgba(0,0,0,0.05);
   transform: scale(1.05);
 }
 
-
 /* ==========================
    MODAL CONTENT (CARD)
    ========================== */
-.phone-login-card {
+.phoneLoginCard {
   margin-top: 10px;
   display: flex;
   flex-direction: column;
-  gap: 16px; /* consistent spacing */
+  gap: 16px;
 }
-
 
 /* ==========================
    TITLE
    ========================== */
-.login-title {
+.loginTitle {
   font-size: 22px;
   font-weight: 700;
   margin: 0;
-  color: #222;
+  color: var(--dark);
   text-align: left;
 }
-
 
 /* ==========================
    INPUT FIELDS
    ========================== */
-.phone-login-card input {
+.phoneLoginCard input {
   width: 100%;
   padding: 11px 14px;
   border-radius: 10px;
   border: 1px solid rgba(0,0,0,0.10);
   font-size: 15px;
   transition: all 150ms ease;
+  background: var(--panel-bg, #fff);
+  color: var(--dark);
 }
 
-.phone-login-card input:focus {
-  border-color: #c9a14a;
-  box-shadow: 0 4px 14px rgba(201,161,74,0.15);
+.phoneLoginCard input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(217,43,58,0.12);
+  outline: none;
 }
-
 
 /* ==========================
    PHONE ROW
    ========================== */
-.phone-row {
+.phoneRow {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.phone-prefix {
+.phonePrefix {
   padding: 11px 10px;
-  background: #f3f4f6;
+  background: rgba(250,250,250,1);
   border-radius: 10px;
   border: 1px solid rgba(0,0,0,0.07);
   font-weight: 600;
+  color: var(--dark);
 }
 
-.phone-input { flex: 1; }
-
+.phoneInput { flex: 1; }
 
 /* ==========================
    BUTTONS (Primary + Secondary)
    ========================== */
-.send-btn,
-.verify-btn,
-.secondary-btn {
+.sendBtn,
+.verifyBtn,
+.secondaryBtn {
   padding: 11px 14px;
-  border-radius: 10px;
+  border-radius: var(--btn-radius, 10px);
   border: none;
   cursor: pointer;
   font-weight: 600;
@@ -151,49 +148,47 @@
 }
 
 /* Primary button */
-.send-btn,
-.verify-btn {
-  background: linear-gradient(90deg, #c9a14a, #f2d288);
-  color: #fff;
-  box-shadow: 0 10px 18px rgba(201,161,74,0.20);
+.sendBtn,
+.verifyBtn {
+  background: var(--accent);
+  color: var(--btn-text, #fff);
+  box-shadow: 0 10px 18px rgba(217,43,58,0.18);
 }
 
-.send-btn:hover,
-.verify-btn:hover {
-  filter: brightness(1.07);
+.sendBtn:hover,
+.verifyBtn:hover {
+  filter: brightness(1.05);
 }
 
-.send-btn[disabled],
-.verify-btn[disabled] {
+.sendBtn[disabled],
+.verifyBtn[disabled] {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
 /* Secondary */
-.secondary-btn {
-  background: #fff;
+.secondaryBtn {
+  background: var(--panel-bg, #fff);
   border: 1px solid rgba(0,0,0,0.15);
-  color: #333;
+  color: var(--dark);
 }
 
-.secondary-btn:hover {
-  background: rgba(0,0,0,0.05);
+.secondaryBtn:hover {
+  background: rgba(0,0,0,0.03);
 }
-
 
 /* ==========================
    OTP Section
    ========================== */
-.otp-instruction {
+.otpInstruction {
   font-size: 14px;
-  color: #4b5563;
+  color: var(--muted-2);
 }
 
-.otp-actions {
+.otpActions {
   display: flex;
   gap: 10px;
 }
-
 
 /* ==========================
    RESPONSIVENESS

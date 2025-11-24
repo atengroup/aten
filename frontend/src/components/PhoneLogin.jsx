@@ -5,7 +5,10 @@ import { signInWithPhoneNumber, updateProfile } from "firebase/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
-import "../assets/components/PhoneLogin.css";
+import styles from "../assets/components/PhoneLogin.module.css";
+
+// uploaded session asset (will be transformed to a URL by your environment)
+const DEV_FALLBACK_IMAGE = "/mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png";
 
 export default function PhoneLogin() {
   const [phone, setPhone] = useState("");
@@ -75,49 +78,39 @@ export default function PhoneLogin() {
       const result = await confirmation.confirm(code);
       const firebaseUser = result.user;
 
-      // If we have a name, update the Firebase user profile so displayName is set
+      // update displayName if provided
       const trimmedName = String(name || "").trim();
       if (trimmedName) {
         try {
-          // updateProfile may not always succeed (e.g. provider restrictions), but we try
           await updateProfile(firebaseUser, { displayName: trimmedName });
         } catch (e) {
           console.warn("updateProfile failed:", e);
         }
       }
 
-      // Force token refresh to ensure any profile changes are reflected
+      // force token refresh
       const idToken = await firebaseUser.getIdToken(true);
 
-      // store idToken and call your backend auth handler
+      // store idToken locally and inform backend/context
       localStorage.setItem("auth_token", idToken);
-
-      // optionally save name to localStorage
       if (trimmedName) {
         try { localStorage.setItem("login_name", trimmedName); } catch (e) {}
       }
-
-      // store customer_phone so SubmitTestimonial picks it up
       const normalizedPhone = firebaseUser.phoneNumber || phone;
       if (normalizedPhone) {
         try { localStorage.setItem("customer_phone", normalizedPhone); } catch (e) {}
         if (typeof window !== "undefined") window.__CUSTOMER_PHONE__ = normalizedPhone;
       }
 
-      // let app/context know about token AND send name so backend stores it
       await loginWithFirebaseIdToken(idToken, trimmedName || null);
-
       toast.success("Logged in");
 
-      // Decide redirect target:
       const fromPath = location.state?.from?.pathname || "";
       const cameFromTestimonial =
         typeof fromPath === "string" &&
          fromPath.includes("/testimonials");
 
       const target = cameFromTestimonial ? fromPath : "/";
-
-      // navigate and replace so back-button doesn't go back to /login
       navigate(target, { replace: true });
     } catch (err) {
       console.error("verifyOtp error", err);
@@ -136,25 +129,25 @@ export default function PhoneLogin() {
   }
 
   return (
-    <div className="phone-login-page">
-      <div className="phone-login-card">
-        <h2 className="login-title">Sign in with phone</h2>
+    <div className={styles.phoneLoginPage}>
+      <div className={styles.phoneLoginCard}>
+        <h2 className={styles.loginTitle}>Sign in with phone</h2>
 
         {step === "input" && (
           <>
             <input
               id="name"
-              className="name-input"
+              className={styles.nameInput}
               placeholder="Your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
 
-            <div className="phone-row">
-              <div className="phone-prefix">+91</div>
+            <div className={styles.phoneRow}>
+              <div className={styles.phonePrefix}>+91</div>
               <input
                 id="phone"
-                className="phone-input"
+                className={styles.phoneInput}
                 placeholder="10 digit phone number"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -162,30 +155,41 @@ export default function PhoneLogin() {
               />
             </div>
 
-            <button className="send-btn" onClick={sendOtp} disabled={loading}>
-              {loading ? "Sending..." : "Send OTP"}
+            <button
+              className={styles.sendBtn}
+              onClick={sendOtp}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className={styles.btnSpinner} aria-hidden="true" />
+                  Sending...
+                </>
+              ) : (
+                "Send OTP"
+              )}
             </button>
           </>
         )}
 
         {step === "otp" && (
           <>
-            <div className="otp-instruction">OTP sent to <strong>{phone}</strong></div>
+            <div className={styles.otpInstruction}>OTP sent to <strong>{phone}</strong></div>
 
             <input
               id="otp"
-              className="otp-input"
+              className={styles.otpInput}
               placeholder="Enter OTP"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               inputMode="numeric"
             />
 
-            <div className="otp-actions">
-              <button className="verify-btn" onClick={verifyOtp} disabled={loading}>
+            <div className={styles.otpActions}>
+              <button className={styles.verifyBtn} onClick={verifyOtp} disabled={loading}>
                 {loading ? "Verifying..." : "Verify & Sign in"}
               </button>
-              <button className="secondary-btn" onClick={resetAll} disabled={loading}>
+              <button className={styles.secondaryBtn} onClick={resetAll} disabled={loading}>
                 Start over
               </button>
             </div>
@@ -193,8 +197,7 @@ export default function PhoneLogin() {
         )}
 
         <div id="recaptcha-container" />
-
-        <div className="login-note" />
+        <div className={styles.loginNote} />
       </div>
     </div>
   );

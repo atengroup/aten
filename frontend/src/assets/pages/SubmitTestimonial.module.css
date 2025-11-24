@@ -1,0 +1,211 @@
+/* SubmitTestimonial.module.css
+   Uses only global :root theme tokens (var(--...))
+*/
+
+.page {
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  color: var(--dark);
+  background: transparent;
+}
+
+/* centered container card */
+.container {
+  max-width: 780px;
+  margin: 48px auto;
+  padding: 28px;
+  background: linear-gradient(180deg, var(--panel-bg) 0%, var(--glass) 100%);
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--soft-shadow);
+  box-sizing: border-box;
+}
+
+/* header */
+.cardHead {
+  text-align: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.title {
+  margin: 6px 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+.subtitle {
+  margin-top: 6px;
+  color: var(--muted-2);
+  font-size: 0.95rem;
+}
+
+/* form */
+.form {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* row */
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.label {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* two-column small layout for rating & type */
+.formRow {
+  display: flex;
+  gap: 12px;
+}
+.formRow > div { flex: 1; }
+
+/* inputs and textarea */
+.input,
+.textarea,
+.select {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  font-size: 0.95rem;
+  color: var(--dark);
+  box-sizing: border-box;
+  width: 100%;
+}
+.textarea { min-height: 110px; resize: vertical; }
+
+/* focus state */
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  box-shadow: var(--soft-shadow);
+  border-color: var(--accent);
+}
+
+/* rating input wrapper */
+.ratingWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ratingInput {
+  width: 84px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  color: var(--dark);
+}
+.ratingHint {
+  color: var(--muted-2);
+  font-size: 13px;
+}
+
+/* file upload row */
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.fileInputHidden { display: none; }
+
+/* upload button */
+.uploadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: linear-gradient(90deg, var(--btn-bg), var(--accent));
+  color: var(--btn-text);
+  box-shadow: var(--card-shadow);
+  font-size: 0.95rem;
+}
+.uploadBtnDisabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* preview */
+.previewBlock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.previewImage {
+  width: 86px;
+  height: 86px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--card-shadow);
+}
+.removeImageBtn {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+/* placeholder text for preview */
+.previewPlaceholder {
+  color: var(--muted-2);
+  font-size: 13px;
+}
+
+/* actions row */
+.actionsRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 6px;
+}
+.submitBtn {
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 800;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--btn-text);
+  background: linear-gradient(90deg, var(--gold-1, var(--accent)), var(--gold-2, var(--btn-bg)));
+  box-shadow: var(--card-shadow);
+}
+.submitBtnDisabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* login prompt */
+.loginPrompt {
+  margin-bottom: 16px;
+}
+
+/* small helper text */
+.helper {
+  font-size: 0.9rem;
+  color: var(--muted-2);
+}
+
+/* responsive */
+@media (max-width: 760px) {
+  .container { padding: 18px; }
+  .formRow { flex-direction: column; }
+  .actionsRow { justify-content: stretch; }
+}

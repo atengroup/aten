@@ -1,17 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Montserrat:wght@500;700&display=swap');
 
-:root{
-  --bg: #BFADA3;           /* very light cool background */
-  --card: #F2E8E4;
-  --accent: #0D0D0C;       /* slate-blue (primary accent) */
-  --accent-2: #25261E;     /* soft cyan for highlights */
-  --muted: #a88441;        /* muted slate for secondary text */
-  --glass: rgba(255,255,255,0.6);
-  --radius:18px;
-  --shadow-1: 0 8px 26px rgba(18,28,34,0.06);
-  --shadow-2: 0 14px 40px rgba(18,28,34,0.10);
-}
-
 
 *{box-sizing:border-box}
 html,body,#root{height:100%}

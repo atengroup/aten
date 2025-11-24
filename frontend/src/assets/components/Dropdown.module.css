@@ -1,0 +1,99 @@
+/* Dropdown.module.css */
+
+/* Wrapper */
+.wrap {
+  position: relative;
+  display: inline-block;
+  min-width: 160px;
+  z-index: 20;
+}
+
+/* Button */
+.btn {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(15,23,30,0.08);
+  background: var(--panel-bg);
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.btn:hover {
+  box-shadow: var(--soft-shadow);
+  transform: translateY(-2px);
+}
+
+/* Label */
+.label {
+  display: flex;
+  align-items: center;
+}
+
+.muted {
+  color: var(--muted-2);
+}
+
+/* Arrow */
+.arrow {
+  opacity: 0.8;
+  margin-left: 8px;
+}
+
+/* List */
+.list {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(18,28,34,0.12);
+  border: 1px solid rgba(15,23,30,0.06);
+  padding: 8px;
+  z-index: 50;
+  list-style: none;
+}
+
+/* Items */
+.item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  transition: background 120ms ease, transform 80ms ease;
+  align-items: center;
+}
+
+.item:hover {
+  background: rgba(11,114,133,0.08);
+  transform: translateY(-1px);
+}
+
+.selected {
+  background: rgba(11,114,133,0.12);
+  font-weight: 700;
+}
+
+.itemLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+/* Checkbox */
+.check {
+  accent-color: var(--accent);
+  transform: scale(1.1);
+}

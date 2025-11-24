@@ -1,7 +1,7 @@
 // src/pages/SubmitTestimonial.jsx
 import React, { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
-import "../assets/pages/SubmitTestimonial.css";
+import styles from "../assets/pages/SubmitTestimonial.module.css";
 import Dropdown from "../components/Dropdown";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -10,6 +10,8 @@ const BACKEND_BASE =
   (typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "http://localhost:5000"
     : "");
+
+const DEV_FALLBACK_IMAGE = "/mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png";
 
 export default function SubmitTestimonial() {
   const [customerPhone, setCustomerPhone] = useState("");
@@ -23,11 +25,11 @@ export default function SubmitTestimonial() {
     customer_type: "",
     service_type: "",
     rating: "",
-    customer_image: "", // NOTE: canonical storage path (e.g., 'testimonials/..jpg')
+    customer_image: "",
     customer_phone: "",
   });
 
-  const [preview, setPreview] = useState(""); // previewable absolute URL or blob URL
+  const [preview, setPreview] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -96,7 +98,6 @@ export default function SubmitTestimonial() {
           return;
         }
         const j = await res.json();
-        // Now testimonials have `customer_image_url` from server
         const arr = j.items || j || [];
         setFoundTestimonials(arr || []);
       } catch (err) {
@@ -115,7 +116,6 @@ export default function SubmitTestimonial() {
     };
   }, [preview]);
 
-  // Upload handler: upload file to server; server returns { path, signedUrl, publicUrl }
   async function handleUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -124,7 +124,6 @@ export default function SubmitTestimonial() {
       return;
     }
 
-    // Show local preview immediately
     const localBlob = URL.createObjectURL(file);
     if (preview && preview.startsWith("blob:")) {
       try { URL.revokeObjectURL(preview); } catch (e) {}
@@ -144,29 +143,25 @@ export default function SubmitTestimonial() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.error || j?.message || "Upload failed");
 
-      // server returns: { path, publicUrl, signedUrl }
       const path = j.path || null;
-      const signedUrl = j.signedUrl || null;
-      const publicUrl = j.publicUrl || null;
+      const signedUrl = j.signedUrl || j.signed_url || null;
+      const publicUrl = j.publicUrl || j.public_url || j.url || null;
 
       if (!path) {
         throw new Error("Server did not return storage path for uploaded image");
       }
 
-      // prefer signedUrl for immediate preview, fallback to publicUrl
       const previewUrl = signedUrl || publicUrl || null;
 
-      // set canonical path in form (store this in DB) and set preview to the usable URL
       setForm((f) => ({ ...f, customer_image: path }));
       if (previewUrl) {
         setPreview(previewUrl);
       } else {
-        // fallback: if server didn't give usable absolute url, try build absolute from path
         try {
           const built = new URL(path, BACKEND_BASE || window.location.origin).toString();
           setPreview(built);
         } catch (err) {
-          // leave the local blob preview if nothing else
+          // keep local blob preview
         }
       }
 
@@ -175,7 +170,6 @@ export default function SubmitTestimonial() {
       console.error("Upload error:", err);
       toast.error(err.message || "Image upload failed", { id: "user-up" });
     } finally {
-      // revoke local blob (we replaced or will replace preview)
       if (localBlob && localBlob.startsWith("blob:")) {
         try { URL.revokeObjectURL(localBlob); } catch (e) {}
       }
@@ -211,10 +205,9 @@ export default function SubmitTestimonial() {
         customer_type: found.customer_type || "",
         service_type: found.service_type || form.service_type,
         rating: found.rating != null ? String(found.rating) : "",
-        customer_image: found.customer_image || "", // canonical path
+        customer_image: found.customer_image || "",
         customer_phone: customerPhone,
       });
-      // preview uses server-supplied customer_image_url (GET returned it)
       setPreview(found.customer_image_url || found.customer_image || "");
     } else {
       setEditingId(null);
@@ -252,7 +245,6 @@ export default function SubmitTestimonial() {
         customer_type: form.customer_type ? String(form.customer_type).trim() : "",
         service_type: String(form.service_type),
         rating: ratingNum,
-        // IMPORTANT: we send canonical storage path (not signedUrl) so server stores non-expiring reference
         customer_image: form.customer_image ? String(form.customer_image).trim() : "",
         customer_phone: customerPhone,
       };
@@ -277,7 +269,6 @@ export default function SubmitTestimonial() {
 
       toast.success(editingId ? "Testimonial updated" : "Thank you for your testimonial!");
 
-      // refresh user's testimonials list
       const refresh = await fetch(`${BACKEND_BASE}/api/testimonials?customer_phone=${encodeURIComponent(customerPhone)}&limit=50`);
       if (refresh.ok) {
         const body = await refresh.json().catch(() => ({}));
@@ -312,18 +303,20 @@ export default function SubmitTestimonial() {
     navigate("/login", { state: { from: location } });
   };
 
+  const previewSrc = preview || DEV_FALLBACK_IMAGE;
+
   return (
-    <div className="test-page">
-      <div className="testimonial-submit-container improved">
-        <div className="card-head">
-          <h2>Share Your Experience</h2>
-          <p className="subtitle">Your words inspire other home-seekers.</p>
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <div className={styles.cardHead}>
+          <h2 className={styles.title}>Share Your Experience</h2>
+          <p className={styles.subtitle}>Your words inspire other home-seekers.</p>
         </div>
 
         {needLogin && (
-          <div className="login-prompt" style={{ marginBottom: 16 }}>
+          <div className={styles.loginPrompt}>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="upload-btn-gold btn-block" onClick={handleQuickLogin}>
+              <button className={styles.uploadBtn} onClick={handleQuickLogin}>
                 Quick login
               </button>
             </div>
@@ -331,26 +324,28 @@ export default function SubmitTestimonial() {
         )}
 
         {!needLogin && (
-          <form className="testimonial-form" onSubmit={handleSubmit} noValidate>
-            <div style={{ marginBottom: 10, fontSize: 13, color: "#333" }}>
-              Logged in as <strong>{customerPhone}</strong>{" "}
+          <form className={styles.form} onSubmit={handleSubmit} noValidate>
+            <div style={{ fontSize: 13, color: "var(--muted-2)" }}>
+              Logged in as <strong>{customerPhone}</strong>
             </div>
 
-            <div className="row">
-              <label htmlFor="name">Name <span style={{ color: "#c00" }}>*</span></label>
+            <div className={styles.row}>
+              <label className={styles.label} htmlFor="name">Name <span aria-hidden style={{ color: "var(--accent)" }}>*</span></label>
               <input
                 id="name"
+                className={styles.input}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Your name"
               />
             </div>
 
-            <div className="form-row">
+            <div className={styles.formRow}>
               <div>
-                <label htmlFor="customer_type">Customer Type</label>
+                <label className={styles.label} htmlFor="customer_type">Customer Type</label>
                 <input
                   id="customer_type"
+                  className={styles.input}
                   value={form.customer_type}
                   onChange={(e) => setForm({ ...form, customer_type: e.target.value })}
                   placeholder="Homeowner, Investor..."
@@ -358,10 +353,11 @@ export default function SubmitTestimonial() {
               </div>
 
               <div>
-                <label htmlFor="rating">Rating <span style={{ color: "#c00" }}>*</span></label>
-                <div className="rating-wrap">
+                <label className={styles.label} htmlFor="rating">Rating <span aria-hidden style={{ color: "var(--accent)" }}>*</span></label>
+                <div className={styles.ratingWrap}>
                   <input
                     id="rating"
+                    className={styles.ratingInput}
                     type="number"
                     value={form.rating}
                     onChange={(e) => setForm({ ...form, rating: e.target.value })}
@@ -370,23 +366,24 @@ export default function SubmitTestimonial() {
                     placeholder="4"
                     required
                   />
-                  <div className="rating-hint">/5</div>
+                  <div className={styles.ratingHint}>/5</div>
                 </div>
               </div>
             </div>
 
-            <div className="row">
-              <label htmlFor="review">Testimonial</label>
+            <div className={styles.row}>
+              <label className={styles.label} htmlFor="review">Testimonial</label>
               <textarea
                 id="review"
+                className={styles.textarea}
                 value={form.review}
                 onChange={(e) => setForm({ ...form, review: e.target.value })}
                 placeholder="Write your experience..."
               />
             </div>
 
-            <div className="row">
-              <label htmlFor="service_type">Service Type <span style={{ color: "#c00" }}>*</span></label>
+            <div className={styles.row}>
+              <label className={styles.label} htmlFor="service_type">Service Type <span aria-hidden style={{ color: "var(--accent)" }}>*</span></label>
               <div style={{ maxWidth: 360 }}>
                 <Dropdown
                   id="service_type"
@@ -408,21 +405,22 @@ export default function SubmitTestimonial() {
               </div>
             </div>
 
-            <div className="row">
-              <label>Upload Your Image</label>
+            <div className={styles.row}>
+              <label className={styles.label}>Upload Your Image</label>
 
-              <div className="file-input-row improved-row">
+              <div className={styles.fileRow}>
                 <input
                   id="user_image"
                   ref={fileRef}
                   type="file"
                   accept="image/*"
                   onChange={handleUpload}
+                  className={styles.fileInputHidden}
                 />
 
                 <button
                   type="button"
-                  className={`upload-btn-gold btn-block ${uploading ? "disabled" : ""}`}
+                  className={`${styles.uploadBtn} ${uploading ? styles.uploadBtnDisabled : ""}`}
                   onClick={() => fileRef.current && fileRef.current.click()}
                   disabled={uploading}
                 >
@@ -430,24 +428,28 @@ export default function SubmitTestimonial() {
                 </button>
 
                 {preview ? (
-                  <div className="preview-block">
-                    <img src={preview} className="testimonial-upload-preview" alt="uploaded preview" />
-                    <button type="button" className="remove-image" onClick={removeImage}>Remove</button>
+                  <div className={styles.previewBlock}>
+                    <img src={previewSrc} className={styles.previewImage} alt="uploaded preview" />
+                    <button type="button" className={styles.removeImageBtn} onClick={removeImage}>Remove</button>
                   </div>
                 ) : (
-                  <div className="preview-placeholder">No image uploaded</div>
+                  <div className={styles.previewPlaceholder}>No image uploaded</div>
                 )}
               </div>
             </div>
 
-            <div style={{ marginTop: 8, fontSize: 13, color: "#333" }}>
+            <div style={{ color: "var(--muted-2)", fontSize: 13 }}>
               {editingId
                 ? "You're editing your testimonial for this service. To add a testimonial for a different service, choose another service from the dropdown."
                 : "You can submit a new testimonial for the selected service type."}
             </div>
 
-            <div className="actions-row" style={{ marginTop: 12 }}>
-              <button className="submit-btn" disabled={loading}>
+            <div className={styles.actionsRow}>
+              <button
+                className={`${styles.submitBtn} ${loading ? styles.submitBtnDisabled : ""}`}
+                disabled={loading}
+                type="submit"
+              >
                 {loading ? (editingId ? "Updating..." : "Submitting...") : (editingId ? "Update Testimonial" : "Submit Testimonial")}
               </button>
             </div>

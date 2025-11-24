@@ -1,9 +1,10 @@
-// src/pages/ProjectsList.jsx
+// src/pages/ProjectsList.jsx (module-ified)
+// Note: dropdown styles are kept global (see CSS module :global rules) so Dropdown component continues to work.
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import "../assets/pages/Project.css";
-import { getImageUrl } from '../lib/api';
+import styles from "../assets/pages/Project.module.css";
+import { getImageUrl, resolveImagePreview } from '../lib/api';
 import Dropdown from "../components/Dropdown";
 
 // Backend base: use localhost backend in dev, else same-origin
@@ -12,6 +13,9 @@ const BACKEND_BASE =
   (typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "http://localhost:5000"
     : "");
+
+// uploaded session asset used as fallback image
+const DEV_FALLBACK_IMAGE = "/mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png";
 
 function safeParse(jsonOrString, fallback = []) {
   if (jsonOrString === null || jsonOrString === undefined) return fallback;
@@ -36,57 +40,60 @@ export default function ProjectsList() {
   const [propertyTypeOptions, setPropertyTypeOptions] = useState([]);
   const [locationAreaOptions, setLocationAreaOptions] = useState([]);
   const [configurationOptions, setConfigurationOptions] = useState([]);
-// Fetch ALL possible filter options once
-const [allPropertyTypes, setAllPropertyTypes] = useState([]);
-const [allLocationAreas, setAllLocationAreas] = useState([]);
-const [allConfigurations, setAllConfigurations] = useState([]);
-useEffect(() => {
-  const fetchFilterOptions = async () => {
-    try {
-      const res = await fetch(`${BACKEND_BASE}/api/projects?limit=1000`);
-      if (!res.ok) throw new Error("Failed to load options");
-      const data = await res.json();
-      const raw = data.items || [];
 
-      const types = new Set();
-      const areas = new Set();
-      const confs = new Set();
+  // Fetch ALL possible filter options once
+  // Map of projectId -> resolved thumbnail src
+  const [thumbnailMap, setThumbnailMap] = useState({});
 
-      raw.forEach((p) => {
-        if (p.property_type) types.add(p.property_type);
-        if (p.location_area) areas.add(p.location_area);
-        (safeParse(p.configurations, [])).forEach((c) => {
-          const name = c?.type || c?.name;
-          if (name) confs.add(name);
+  useEffect(() => {
+    let mounted = true;
+    const fetchFilterOptions = async () => {
+      try {
+        const res = await fetch(`${BACKEND_BASE}/api/projects?limit=1000`);
+        if (!res.ok) throw new Error("Failed to load options");
+        const data = await res.json();
+        const raw = data.items || [];
+
+        const types = new Set();
+        const areas = new Set();
+        const confs = new Set();
+
+        raw.forEach((p) => {
+          if (p.property_type) types.add(p.property_type);
+          if (p.location_area) areas.add(p.location_area);
+          (safeParse(p.configurations, [])).forEach((c) => {
+            const name = c?.type || c?.name;
+            if (name) confs.add(name);
+          });
         });
-      });
 
-      const sortedTypes = Array.from(types).sort();
-      const sortedAreas = Array.from(areas).sort();
-      const sortedConfs = Array.from(confs).sort();
+        const sortedTypes = Array.from(types).sort();
+        const sortedAreas = Array.from(areas).sort();
+        const sortedConfs = Array.from(confs).sort();
 
-      setAllPropertyTypes(sortedTypes);
-      setAllLocationAreas(sortedAreas);
-      setAllConfigurations(sortedConfs);
+        if (!mounted) return;
+        setAllPropertyTypes(sortedTypes);
+        setAllLocationAreas(sortedAreas);
+        setAllConfigurations(sortedConfs);
 
-      // Also set current dropdown options
-      setPropertyTypeOptions(sortedTypes);
-      setLocationAreaOptions(sortedAreas);
-      setConfigurationOptions(sortedConfs);
-    } catch (err) {
-      console.error("Failed to load filter options:", err);
-    }
-  };
+        // Also set current dropdown options
+        setPropertyTypeOptions(sortedTypes);
+        setLocationAreaOptions(sortedAreas);
+        setConfigurationOptions(sortedConfs);
+      } catch (err) {
+        console.error("Failed to load filter options:", err);
+      }
+    };
 
-  fetchFilterOptions();
-}, [BACKEND_BASE]); // Run once
-  /**
-   * fetchList(overrides = {})
-   * overrides may contain: q, city, property_type, location_area, configuration, page, limit
-   * configuration is applied client-side (configurations is JSON array per project)
-   */
+    fetchFilterOptions();
+    return () => {
+      mounted = false;
+    };
+  }, [BACKEND_BASE]); // Run once
+
   const fetchList = async (overrides = {}) => {
     setLoading(true);
+    let mounted = true;
     try {
       // compute effective params (overrides take precedence)
       const qParam = overrides.q !== undefined ? overrides.q : q;
@@ -140,22 +147,47 @@ useEffect(() => {
         );
       }
 
+      if (!mounted) return;
       setItems(filtered);
 
-      // derive options for selects from raw data (unique values). Keep existing order stable.
-      
+      // --- Resolve thumbnails for each project (async) ---
+      const thumbMap = {};
+      await Promise.all(
+        filtered.map(async (p) => {
+          const candidate = (p.thumbnail && p.thumbnail.trim()) ||
+                            ((p.gallery && p.gallery[0]) ? p.gallery[0] : "") ||
+                            DEV_FALLBACK_IMAGE;
+          try {
+            const resolved = await resolveImagePreview(candidate, { useBlob: false });
+            thumbMap[p.id] = resolved.src || getImageUrl(candidate) || DEV_FALLBACK_IMAGE;
+          } catch (err) {
+            thumbMap[p.id] = getImageUrl(candidate) || DEV_FALLBACK_IMAGE;
+          }
+        })
+      );
+
+      if (!mounted) return;
+      setThumbnailMap(thumbMap);
+
     } catch (err) {
       console.error("Failed to fetch projects:", err);
       toast.error("Failed to load projects. Check server");
       setItems([]);
+      setThumbnailMap({});
     } finally {
-      setLoading(false);
+      if (mounted) setLoading(false);
+      return () => { mounted = false; };
     }
   };
 
   // initial load
   useEffect(() => {
-    fetchList();
+    let cancelled = false;
+    (async () => {
+      await fetchList();
+      if (cancelled) return;
+    })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -179,91 +211,97 @@ useEffect(() => {
   };
 
   return (
-    <div className="projects-page">
-      <div className="projects-header">
-        <h1>Browse Properties</h1>
+    <div className={styles.projectsPage}>
+      <div className={styles.projectsHeader}>
+        <h1 className={styles.headerTitle}>Browse Properties</h1>
 
-        <div className="projects-filters" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <div className={styles.projectsFilters} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           <input
             aria-label="Search projects"
             placeholder="Search projects..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            className={styles.filterInput}
           />
           <input
             aria-label="City"
             placeholder="City"
             value={city}
             onChange={(e) => setCity(e.target.value)}
+            className={styles.filterInput}
           />
 
           {/* Dropdown from your components */}
-          <div className="select-wrap" style={{ minWidth: 160 }}>
+          <div className={styles.selectWrap} style={{ minWidth: 160 }}>
             <Dropdown
               value={propertyType}
               onChange={(v) => handlePropertyTypeChange(v)}
               options={propertyTypeOptions}
               placeholder="All types"
-               includeAll={true}           // <-- shows the "All" option here
+              includeAll={true}
               allLabel="All"
             />
           </div>
 
-          <div className="select-wrap" style={{ minWidth: 160 }}>
+          <div className={styles.selectWrap} style={{ minWidth: 160 }}>
             <Dropdown
               value={locationArea}
               onChange={(v) => handleLocationAreaChange(v)}
               options={locationAreaOptions}
               placeholder="All areas"
-               includeAll={true}        // <-- shows the "All" option here
-  allLabel="All"
+              includeAll={true}
+              allLabel="All"
             />
           </div>
 
-          <div className="select-wrap" style={{ minWidth: 160 }}>
+          <div className={styles.selectWrap} style={{ minWidth: 160 }}>
             <Dropdown
               value={configuration}
               onChange={(v) => handleConfigurationChange(v)}
               options={configurationOptions}
               placeholder="Any configuration"
-               includeAll={true}           // <-- shows the "All" option here
-  allLabel="All"
+              includeAll={true}
+              allLabel="All"
             />
           </div>
 
-          <button className="btn btn-filter" onClick={onSearchClick}>Search</button>
+          <button className={`${styles.btn} ${styles.btnFilter}`} onClick={onSearchClick}>Search</button>
         </div>
       </div>
 
       {loading ? (
         <div style={{ padding: 24 }}>Loading projects…</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: 28, color: "#666" }} className="projects-empty">
+        <div style={{ padding: 28, color: "#666" }} className={`${styles.projectsEmpty}`}>
           No projects found.
           <div style={{ marginTop: 12 }}>
-            <button onClick={() => fetchList()} className="btn">Reload</button>
+            <button onClick={() => fetchList()} className={styles.btn}>Reload</button>
           </div>
         </div>
       ) : (
-        <div className="projects-grid">
+        <div className={styles.projectsGrid}>
           {items.map((p) => (
-            <article key={p.id} className="project-card">
-              <Link to={`/projects/${p.slug}`} className="card-link">
-                <div className="card-media">
-                  <img src={ getImageUrl((p.thumbnail) || (p.gallery && p.gallery[0]) || "/placeholder.jpg") } alt={p.title} loading="lazy" />
+            <article key={p.id} className={styles.projectCard}>
+              <Link to={`/projects/${p.slug}`} className={styles.cardLink}>
+                <div className={styles.cardMedia}>
+                  <img
+                    src={ thumbnailMap[p.id] || getImageUrl((p.thumbnail) || (p.gallery && p.gallery[0]) || DEV_FALLBACK_IMAGE) }
+                    alt={p.title}
+                    loading="lazy"
+                  />
                 </div>
-                <div className="card-body">
+                <div className={styles.cardBody}>
                   <h3>{p.title}</h3>
-                  <div className="meta">{p.location_area} — {p.city}</div>
-                  <div className="rera">{p.rera}</div>
-                  <div className="card-cta">
-                    <span className="type">{p.property_type}</span>
+                  <div className={styles.meta}>{p.location_area} — {p.city}</div>
+                  <div className={styles.rera}>{p.rera}</div>
+                  <div className={styles.cardCta}>
+                    <span className={styles.type}>{p.property_type}</span>
                   </div>
                 </div>
               </Link>
-              <div className="card-actions">
-                <a href={`tel:${p.contact_phone}`} className="call">Call</a>
-                <a href={`https://wa.me/${(p.contact_phone||"").replace(/\D/g,"")}`} target="_blank" rel="noreferrer" className="wa">WhatsApp</a>
+              <div className={styles.cardActions}>
+                <a href={`tel:${p.contact_phone}`} className={styles.call}>Call</a>
+                <a href={`https://wa.me/${(p.contact_phone||"").replace(/\D/g,"")}`} target="_blank" rel="noreferrer" className={styles.wa}>WhatsApp</a>
               </div>
             </article>
           ))}

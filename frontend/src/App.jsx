@@ -2,8 +2,6 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import InterioHome from "./pages/InterioHome";
 import Home from "./pages/Home";
 import HomeEnquiry from "./pages/HomeEnquiry.jsx";
-import Details from "./pages/Details";
-import Enquiry from "./pages/Enquiry";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import PhoneLoginModal from "./components/PhoneLogin";
@@ -42,16 +40,7 @@ export default function App() {
           <Route path="/bathroom" element={<BathroomEnquiry />} />
           <Route path="/wardrobe" element={<WardrobeEnquiry />} />
           <Route path="/custom" element={<CustomEnquiry />} />
-          <Route path="/details/:type/:themeId" element={<Details />} />
           <Route path="/testimonials" element={<SubmitTestimonial />} />
-          <Route
-            path="/enquiry"
-            element={
-              <RequireAuth>
-                <Enquiry />
-              </RequireAuth>
-            }
-          />
           <Route path="/login" element={<PhoneLoginModal />} />
 
           {/* --- Realty / Projects section --- */}

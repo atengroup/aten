@@ -1,0 +1,412 @@
+/* src/assets/pages/admin/EnquiriesAdmin.module.css
+   Uses only global :root theme variables (var(--...))
+*/
+
+/* Page shell */
+.enquiriesAdminPage {
+  padding: 18px;
+  background: transparent;
+  box-sizing: border-box;
+  font-family: var(--font-sans);
+  color: var(--dark);
+}
+
+/* Controls row */
+.controlsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+/* Left group */
+.controlsLeft {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Basic groups */
+.controlsGroup {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+
+.controlLabel {
+  font-size: 12px;
+  color: var(--dark);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+/* Filters container */
+.filtersWrap {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* each small filter group */
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+
+/* small label used above inputs */
+.filterLabel {
+  font-size: 12px;
+  color: var(--dark);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+/* Search panel */
+.searchPanel {
+  background: var(--panel-bg);
+  padding: 10px;
+  border-radius: var(--panel-radius);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  align-items: center;
+}
+
+.searchInner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* small column inside search */
+.filterCol {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+}
+
+/* search input */
+.searchInput {
+  padding: 10px 12px;
+  border-radius: var(--panel-radius);
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  outline: none;
+  min-width: 220px;
+  font-size: 0.95rem;
+  transition: box-shadow .12s ease, border-color .12s ease;
+}
+
+/* Right controls */
+.controlsRight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.columnsWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.controlLabelInline {
+  font-weight: 700;
+}
+
+.colsDropdown {
+  min-width: 260px;
+}
+
+.actionsWrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Buttons */
+.btn {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--dark);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.btnRefresh {
+  background: linear-gradient(90deg, var(--accent), var(--btn-bg));
+  color: var(--btn-text);
+  border: none;
+}
+
+/* Table Toggle */
+.tableToggleWrap { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+
+.tableToggleBtn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--dark);
+  transition: all 0.15s ease;
+}
+
+.tableToggleBtn:hover { transform: translateY(-1px); }
+
+.activeTable {
+  background: var(--dark);
+  color: var(--btn-text);
+  border-color: var(--dark);
+  transform: translateY(-1px);
+}
+
+/* TABLE WRAPPER FIX (NO CLIPPING) */
+.tableWrap {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  box-shadow: var(--card-shadow);
+  padding: 12px;
+
+  overflow-x: auto !important;
+  overflow-y: auto;
+
+  max-width: 100%;
+  width: 100%;
+  display: block;
+
+  position: relative;
+  scrollbar-width: thin;
+}
+
+/* table */
+.enquiriesTable {
+  width: max-content;  /* grows beyond screen */
+  min-width: 100%;     /* but never shrink */
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.relatedTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.enquiriesTable th,
+.relatedTable th {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 2px solid var(--panel-border);
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.enquiriesTable td,
+.relatedTable td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--panel-border);
+  vertical-align: top;
+  color: var(--dark);
+}
+
+/* small action buttons */
+.btnSmall {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: var(--dark);
+  color: var(--btn-text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.btnSmall:hover { opacity: 0.95; }
+
+/* expanded row */
+.rowExpanded td {
+  background: var(--glass);
+  padding: 14px;
+}
+
+.expandedPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.expandedHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* name button */
+.nameBtn {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+  text-decoration: underline;
+  padding: 0;
+}
+
+/* Dropdown override (module scope) */
+.dropdownWrap { position: relative; min-width: 160px; display: inline-block; z-index: 2000; }
+
+.dropdownBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: linear-gradient(180deg, var(--panel-bg), var(--glass));
+  color: var(--dark);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdownBtn:hover { box-shadow: var(--soft-shadow); transform: translateY(-2px); }
+
+.dropdownList {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--panel-bg);
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(18,28,34,0.12);
+  border: 1px solid var(--panel-border);
+  padding: 8px;
+  list-style: none;
+  z-index: 3000;
+}
+
+.dropdownItem {
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.dropdownItem:hover { background: rgba(11,114,133,0.04); }
+
+.dropdownItem.selected {
+  background: rgba(11,114,133,0.06);
+  font-weight: 700;
+}
+
+.dropdownItemLabel {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color: var(--dark);
+  font-size:0.95rem;
+}
+
+/* Pagination */
+.paginationWrap {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.paginationLeft { display:flex; gap:8px; align-items:center; }
+
+.paginationRight { font-size: 13px; color: var(--dark); }
+
+.rowsInfo { font-size: 13px; color: var(--dark); font-weight: 700; }
+
+/* Loading / empty */
+.loading,
+.empty {
+  padding: 20px;
+  color: var(--muted-2);
+  text-align: center;
+}
+
+/* Modal */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index: 9999;
+}
+
+.modalContent {
+  background: var(--panel-bg);
+  padding: 18px;
+  border-radius: 10px;
+  width: min(900px, 94%);
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+.modalActions {
+  margin-top: 12px;
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+}
+
+.primary {
+  background: var(--dark);
+  color: var(--btn-text);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+/* Edit form */
+.editFormGrid {
+  display: grid;
+  gap: 8px;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.editFieldLabel {
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--dark);
+}
+
+/* Responsive */
+@media (max-width: 1000px) {
+  .controlsLeft { flex-wrap: wrap; gap: 12px; }
+}
+
+@media (max-width: 700px) {
+  .controlsRow { flex-direction: column; align-items: stretch; }
+  .controlsLeft { flex-direction: column; width: 100%; }
+  .dropdownWrap { width: 100%; }
+}

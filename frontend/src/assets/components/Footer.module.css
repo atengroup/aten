@@ -1,0 +1,146 @@
+/* Footer.module.css
+   Uses ONLY global theme variables.
+   No :global(:root) block here (avoid overwriting global theme).
+*/
+
+/* Footer base wrapper */
+.siteFooter {
+  background: linear-gradient(180deg, var(--dark), var(--dark));
+  color: var(--muted);
+  padding: 40px 20px 20px;
+  box-shadow: var(--shadow, 0 8px 24px rgba(0,7,45,0.12));
+  border-top: 1px solid var(--border, rgba(255,255,255,0.04));
+}
+
+/* Container */
+.footerInner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+/* Brand area */
+.footerBrand {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.brandImage {
+  width: 120px;
+  height: auto;
+  object-fit:contain;
+}
+
+.brandTitle {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.6px;
+}
+
+.brandTag {
+  margin: 6px 0 0 0;
+  color: var(--muted-2);
+  font-size: 0.95rem;
+}
+
+/* Quick Links */
+.footerLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.link {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.18s ease, transform 0.12s ease;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.link:hover,
+.link:focus {
+  color: var(--accent);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+/* Social Icons */
+.footerSocial {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.iconLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.03);
+  transition: background 160ms ease, transform 120ms ease, color 160ms ease;
+  color: var(--muted-2);
+}
+
+.iconLink:hover,
+.iconLink:focus {
+  background: rgba(217,43,58,0.12);
+  color: var(--accent);
+  transform: translateY(-3px);
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  color: currentColor; /* follows parent color */
+}
+
+/* Bottom text */
+.footerBottom {
+  text-align: center;
+  margin-top: 30px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  color: var(--muted-2);
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .footerInner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .footerBrand {
+    gap: 12px;
+  }
+  .brandImage {
+    width: 72px;
+    height: 52px;
+  }
+  .footerSocial {
+    margin-top: 10px;
+  }
+  .footerLinks {
+    flex-direction: row;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .link {
+    padding: 8px 10px;
+  }
+}

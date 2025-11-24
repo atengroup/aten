@@ -2,8 +2,8 @@
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { auth } from "../../firebaseConfig";
-import "../../assets/pages/admin/AddAdmin.css";
-import showDeleteConfirm from "../../components/ConfirmDeleteToast"; // ⬅️ IMPORTED SAME CONFIRM BOX
+import showDeleteConfirm from "../../components/ConfirmDeleteToast";
+import styles from "../../assets/pages/admin/AddAdmin.module.css";
 
 /* ------------------------------
    Auth Token Helpers
@@ -170,19 +170,20 @@ export default function AddAdmin() {
   /* ------------------------------ UI ------------------------------ */
 
   return (
-    <div className="admins-admin-page">
-      <header className="inline-row" style={{ justifyContent: "space-between" }}>
-        <h2>Add / Manage Admins</h2>
-        <button className="btn" onClick={loadAdmins} disabled={loading}>
+    <div className={styles.adminsAdminPage}>
+      <header className={styles.inlineRow} style={{ justifyContent: "space-between" }}>
+        <h2 className={styles.heading}>Add / Manage Admins</h2>
+        <button className={styles.btn} onClick={loadAdmins} disabled={loading}>
           {loading ? "Refreshing…" : "Refresh"}
         </button>
       </header>
 
       <section>
-        <form onSubmit={handleAdd}>
-          <div>
-            <label>Phone *</label>
+        <form onSubmit={handleAdd} className={styles.formRow}>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Phone *</label>
             <input
+              className={styles.input}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+91XXXXXXXXXX"
@@ -190,23 +191,24 @@ export default function AddAdmin() {
             />
           </div>
 
-          <div>
-            <label>Name</label>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Name</label>
             <input
+              className={styles.input}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Full name"
             />
           </div>
 
-          <div className="inline-row">
-            <button className="btn primary" type="submit" disabled={adding}>
+          <div className={styles.inlineRow}>
+            <button className={`${styles.btn} ${styles.primary}`} type="submit" disabled={adding}>
               {adding ? "Adding…" : "Add Admin"}
             </button>
 
             <button
               type="button"
-              className="btn ghost"
+              className={`${styles.btn} ${styles.ghost}`}
               onClick={() => {
                 setPhone("");
                 setName("");
@@ -222,9 +224,9 @@ export default function AddAdmin() {
         {loading ? (
           <p>Loading admins…</p>
         ) : admins.length === 0 ? (
-          <p className="muted">No admins found.</p>
+          <p className={styles.muted}>No admins found.</p>
         ) : (
-          <table className="admin-table">
+          <table className={styles.adminTable}>
             <thead>
               <tr>
                 <th>Name</th>
@@ -239,15 +241,11 @@ export default function AddAdmin() {
                 <tr key={a.id}>
                   <td>{a.name || "—"}</td>
                   <td>{a.phone || "—"}</td>
+                  <td>{a.created_at ? new Date(a.created_at).toLocaleString() : "—"}</td>
                   <td>
-                    {a.created_at
-                      ? new Date(a.created_at).toLocaleString()
-                      : "—"}
-                  </td>
-                  <td>
-                    <div className="admin-actions">
+                    <div className={styles.adminActions}>
                       <button
-                        className="btn small danger"
+                        className={`${styles.btn} ${styles.small} ${styles.danger}`}
                         onClick={() => deleteAdmin(a.id, a.name)}
                       >
                         Delete

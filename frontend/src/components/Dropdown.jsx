@@ -1,22 +1,20 @@
 // src/components/Dropdown.jsx
 import React, { useState, useRef, useEffect } from "react";
-import "../assets/pages/Project.css"; // ensure the styles are present
+import styles from "../assets/components/Dropdown.module.css"; // CSS MODULE
 
 /**
  * Dropdown supporting single-select (default) and multi-select mode.
  *
  * Props:
- * - value: string (single mode) OR array of strings (multi mode)
- * - onChange: (value) => void
- *    - single mode: called with string (or "" to clear)
- *    - multi mode: called with array of strings (empty array to clear)
- * - options: array of { value, label } OR array of strings
- * - placeholder: string shown when nothing selected (single mode) or when none in multi
- * - id: optional id for accessibility
- * - className: additional wrapper class
- * - includeAll: boolean - show an "All" option which clears selection
- * - allLabel: label for All (default: "All")
- * - multiple: boolean - when true enable multi-select behavior
+ * - value         : string | array
+ * - onChange      : function
+ * - options       : array of string or {value,label}
+ * - placeholder   : string
+ * - id            : string
+ * - className     : extra wrapper class
+ * - includeAll    : boolean ("All" option)
+ * - allLabel      : label for All
+ * - multiple      : boolean
  */
 export default function Dropdown({
   value,
@@ -33,13 +31,12 @@ export default function Dropdown({
   const rootRef = useRef(null);
   const listRef = useRef(null);
 
-  // Normalize options -> [{value, label}]
-  const normalized = Array.isArray(options)
-    ? options.map((opt) => {
-        if (opt && typeof opt === "object") return { value: String(opt.value), label: String(opt.label ?? opt.value) };
-        return { value: String(opt), label: String(opt) };
-      })
-    : [];
+  // Normalize options -> [{value,label}]
+  const normalized = options.map((opt) =>
+    typeof opt === "object"
+      ? { value: String(opt.value), label: String(opt.label ?? opt.value) }
+      : { value: String(opt), label: String(opt) }
+  );
 
   // Normalize incoming value(s)
   const selectedValues = multiple
@@ -50,49 +47,47 @@ export default function Dropdown({
     ? ""
     : String(value);
 
-  // Helpers
-  const isSelected = (val) =>
-    multiple ? selectedValues.includes(String(val)) : String(val) === String(selectedValues);
+  const isSelected = (v) =>
+    multiple ? selectedValues.includes(String(v)) : selectedValues === String(v);
 
-  // Display label
+  // Label displayed inside button
   let label;
   if (multiple) {
-    if (!selectedValues || selectedValues.length === 0) label = placeholder || "Select";
+    if (selectedValues.length === 0) label = placeholder || "Select";
     else if (selectedValues.length === 1) {
       const found = normalized.find((o) => o.value === selectedValues[0]);
-      label = found ? found.label : selectedValues[0];
+      label = found?.label || selectedValues[0];
     } else {
-      // Show count + first label as concise default
       const first = normalized.find((o) => o.value === selectedValues[0]);
-      label = `${selectedValues.length} selected${first ? ` — ${first.label}` : ""}`;
+      label = `${selectedValues.length} selected — ${first?.label || ""}`;
     }
   } else {
-    const sel = normalized.find((o) => o.value === selectedValues) || null;
-    label = sel ? sel.label : (placeholder || "Select");
+    const sel = normalized.find((o) => o.value === selectedValues);
+    label = sel?.label || placeholder || "Select";
   }
 
-  // Close on outside click/Escape
+  /* ------------------ Outside Click + Esc Close ------------------ */
   useEffect(() => {
-    function onDocClick(e) {
+    function closeOnOutside(e) {
       if (!rootRef.current) return;
       if (!rootRef.current.contains(e.target)) setOpen(false);
     }
-    function onEsc(e) {
+    function closeOnEsc(e) {
       if (e.key === "Escape") setOpen(false);
     }
-    document.addEventListener("click", onDocClick);
-    document.addEventListener("keydown", onEsc);
+    document.addEventListener("click", closeOnOutside);
+    document.addEventListener("keydown", closeOnEsc);
     return () => {
-      document.removeEventListener("click", onDocClick);
-      document.removeEventListener("keydown", onEsc);
+      document.removeEventListener("click", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEsc);
     };
   }, []);
 
-  // Keyboard navigation when open
+  /* ------------------ Keyboard Navigation ------------------ */
   useEffect(() => {
     if (!open || !listRef.current) return;
     const items = Array.from(listRef.current.querySelectorAll("[role='option']"));
-    let idx = items.findIndex((it) => it.getAttribute("data-value") === String(selectedValues?.[0] ?? selectedValues));
+    let idx = items.findIndex((i) => i.getAttribute("data-value") === String(selectedValues));
     if (idx < 0) idx = 0;
     items[idx]?.focus();
 
@@ -106,57 +101,45 @@ export default function Dropdown({
         items[idx]?.focus();
         e.preventDefault();
       } else if (e.key === "Enter" || e.key === " ") {
-        const v = document.activeElement?.getAttribute("data-value");
-        if (v !== null && v !== undefined) {
-          if (v === "__empty__") {
-            // clear selection
-            if (multiple) onChange([]);
-            else onChange("");
-            if (!multiple) setOpen(false);
-          } else if (multiple) {
-            toggleValue(v);
-            // keep open in multi mode
-          } else {
-            onChange(v);
-            setOpen(false);
-          }
+        const v = document.activeElement?.dataset.value;
+        if (!v) return;
+
+        if (v === "__empty__") {
+          multiple ? onChange([]) : onChange("");
+          if (!multiple) setOpen(false);
+        } else if (multiple) {
+          toggleValue(v);
+        } else {
+          onChange(v);
+          setOpen(false);
         }
         e.preventDefault();
-      } else if (e.key === "Escape") {
-        setOpen(false);
       }
     }
 
-    const el = listRef.current;
-    el.addEventListener("keydown", onKey);
-    return () => el.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, selectedValues]);
+    const list = listRef.current;
+    list.addEventListener("keydown", onKey);
+    return () => list.removeEventListener("keydown", onKey);
+  }, [open, selectedValues, multiple]);
 
-  // Toggle logic for multi mode
+  /* ------------------ Helpers ------------------ */
   function toggleValue(v) {
-    const s = selectedValues.slice(); // copy
-    const idx = s.indexOf(String(v));
-    if (idx >= 0) {
-      s.splice(idx, 1); // remove
-    } else {
-      s.push(String(v));
-    }
+    const s = [...selectedValues];
+    const i = s.indexOf(String(v));
+    if (i >= 0) s.splice(i, 1);
+    else s.push(String(v));
     onChange(s);
   }
 
-  // Click handler for options
   function pick(v) {
     if (v === "__empty__") {
-      if (multiple) onChange([]);
-      else onChange("");
+      multiple ? onChange([]) : onChange("");
       setOpen(false);
       return;
     }
 
     if (multiple) {
       toggleValue(v);
-      // remain open in multi mode for additional selections
     } else {
       onChange(v);
       setOpen(false);
@@ -164,42 +147,28 @@ export default function Dropdown({
   }
 
   return (
-    <div
-      ref={rootRef}
-      className={`dropdown-wrap ${className}`}
-      style={{ position: "relative" }}
-    >
+    <div ref={rootRef} className={`${styles.wrap} ${className}`}>
       <button
         type="button"
         id={id}
-        className="dropdown-btn"
+        className={styles.btn}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowDown") {
-            e.preventDefault();
-            setOpen(true);
-            setTimeout(() => listRef.current?.querySelector("[role='option']")?.focus(), 0);
-          }
-        }}
       >
-        <span className={`dropdown-label ${(!selectedValues || (multiple ? selectedValues.length === 0 : selectedValues === "")) ? "muted" : ""}`}>
+        <span className={`${styles.label} ${(!multiple && !value) || (multiple && selectedValues.length === 0) ? styles.muted : ""}`}>
           {label}
         </span>
-        <span className="dropdown-arrow" aria-hidden>
-          ▾
-        </span>
+        <span className={styles.arrow}>▾</span>
       </button>
 
       {open && (
         <ul
-
           ref={listRef}
           role="listbox"
           aria-labelledby={id}
           aria-multiselectable={multiple ? "true" : undefined}
-          className="dropdown-list"
+          className={styles.list}
           tabIndex={-1}
         >
           {includeAll && (
@@ -207,13 +176,13 @@ export default function Dropdown({
               role="option"
               tabIndex={0}
               data-value="__empty__"
-              className={`dropdown-item ${multiple ? (selectedValues.length === 0 ? "selected" : "") : (String(selectedValues) === "" ? "selected" : "")}`}
               onClick={() => pick("__empty__")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") pick("__empty__");
-              }}
+              className={`${styles.item} ${(!multiple && selectedValues === "") ||
+              (multiple && selectedValues.length === 0)
+                ? styles.selected
+                : ""}`}
             >
-              <div className="dropdown-item-label muted">{allLabel}</div>
+              <span className={`${styles.itemLabel} ${styles.muted}`}>{allLabel}</span>
             </li>
           )}
 
@@ -224,25 +193,20 @@ export default function Dropdown({
               tabIndex={0}
               data-value={opt.value}
               aria-selected={isSelected(opt.value)}
-              className={`dropdown-item ${isSelected(opt.value) ? "selected" : ""}`}
               onClick={() => pick(opt.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") pick(opt.value);
-              }}
+              className={`${styles.item} ${isSelected(opt.value) ? styles.selected : ""}`}
             >
-              <div className="dropdown-item-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span >{opt.label}</span>
+              <span className={styles.itemLabel}>
+                {opt.label}
                 {multiple && (
-                  <input 
+                  <input
                     type="checkbox"
                     readOnly
-                    tabIndex={-1}
                     checked={isSelected(opt.value)}
-                    aria-hidden
+                    className={styles.check}
                   />
                 )}
-                
-              </div>
+              </span>
             </li>
           ))}
         </ul>

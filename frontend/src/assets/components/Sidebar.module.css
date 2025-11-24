@@ -1,0 +1,55 @@
+/* Sidebar.module.css
+   Uses global theme variables from :root
+*/
+
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  background: var(--dark-2);          /* deep navy panel */
+  color: var(--muted);                /* readable light text */
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+
+  border-right: 1px solid var(--panel-border);
+  box-shadow: var(--soft-shadow);
+}
+
+.sidebarLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.link {
+  color: var(--muted);
+  text-decoration: none;
+  background: none;
+  border: none;
+
+  font-size: 1rem;
+  font-weight: 600;
+
+  text-align: left;
+  cursor: pointer;
+
+  padding: 8px 6px;
+  border-radius: 6px;
+
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.link:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--accent);
+  transform: translateX(4px);
+}
+
+/* Active state (optional, if you add logic later) */
+.active {
+  background: rgba(217,43,58,0.14);
+  color: var(--accent);
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+}

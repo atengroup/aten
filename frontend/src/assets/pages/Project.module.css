@@ -1,0 +1,211 @@
+/* Project.module.css
+   Converted to CSS Module. Uses global theme variables from :root.
+   NOTE: Dropdown styles are intentionally exported as global so the Dropdown component (separate file) keeps working.
+*/
+
+/* page shell */
+.projectsPage{
+  max-width: var(--page-max, 1200px);
+  margin: 28px auto;
+  padding: 22px;
+  box-sizing: border-box;
+  min-height: 80vh;
+}
+
+/* header / filters */
+.projectsHeader{
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  justify-content:space-between;
+  gap:2rem;
+  margin-bottom: 18px;
+}
+.headerTitle{
+  margin:0;
+  font-size: 1.45rem;
+  color: var(--dark);
+  letter-spacing: -0.2px;
+}
+.projectsFilters{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  background: linear-gradient(180deg, rgba(250,250,250,1), rgba(250,250,250,1));
+  border: 1px solid var(--panel-border, rgba(229,215,190,0.36));
+  padding: 10px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+.filterInput {
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(15,23,30,0.06);
+  background:var(--panel-bg, #fff);
+  min-width:180px;
+  outline: none;
+  transition: box-shadow .15s ease, border-color .15s ease;
+  font-size:0.95rem;
+}
+.filterInput:focus{
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  border-color: rgba(11,114,133,0.12);
+}
+
+/* search / filter buttons */
+.btn {
+  padding:10px 14px;
+  border-radius:10px;
+  background: var(--accent);
+  color: var(--btn-text, #fff);
+  border: none;
+  cursor: pointer;
+  font-weight:700;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+
+
+/* grid */
+.projectsGrid{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap, 18px);
+}
+
+/* card */
+.projectCard{
+  background: var(--panel-bg, #fff);
+  border: 1px solid var(--panel-border, rgba(229,215,190,0.36));
+  border-radius: calc(var(--panel-radius, 12px) + 4px);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  display:flex;
+  flex-direction: column;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s;
+}
+.projectCard:hover{
+  transform: translateY(-8px);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.12);
+  border-color: rgba(15,23,30,0.04);
+}
+
+.cardLink{ color:inherit; text-decoration: none; display:block; flex:1; }
+.cardMedia{
+  aspect-ratio: 16/9;
+  width: 100%;
+  background: linear-gradient(180deg,#f5f7f8,#ffffff);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.cardMedia img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  transition: transform .45s ease;
+}
+.projectCard:hover .cardMedia img { transform: scale(1.04); }
+
+.cardBody{
+  padding:14px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.cardBody h3{ margin:0; font-size:1.05rem; color: var(--dark); }
+.meta{ font-size:0.9rem; color: var(--muted-2); margin-bottom:6px; }
+.rera{ font-size:0.82rem; color: var(--muted-2); margin-bottom:6px; }
+.cardCta .type{
+  color: var(--accent);
+}
+
+/* metadata row (badges) */
+.cardMetaRow{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:flex-start;
+  flex-wrap:wrap;
+}
+.badge {
+  font-size:0.8rem;
+  padding:6px 8px;
+  border-radius:10px;
+  background: linear-gradient(180deg,#fff,#f7f8f9);
+  border:1px solid rgba(15,23,30,0.04);
+  color:var(--accent);
+  font-weight:700;
+  box-shadow: 0 6px 18px rgba(12,18,20,0.03);
+}
+
+/* actions */
+.cardActions{
+  display:flex;
+  gap:8px;
+  padding:10px 12px;
+  border-top:1px solid rgba(15,23,30,0.03);
+  align-items:center;
+  justify-content:space-between;
+  background: linear-gradient(180deg,#fbfcfc,#ffffff);
+}
+.cardActions .left { display:flex; gap:8px; align-items:center; }
+.call,
+.wa {
+  padding:8px 12px;
+  border-radius:10px;
+  text-decoration:none;
+  font-weight:700;
+  font-size:0.9rem;
+  display:inline-flex; gap:8px; align-items:center;
+}
+.call{
+  background:transparent;
+  color: var(--dark);
+  border: 1px solid var(--panel-border, rgba(229,215,190,0.36));
+}
+.wa{
+  background:#25D366;
+  color:#fff;
+  border:none;
+}
+
+/* placeholder / empty state */
+.projectsEmpty{
+  text-align:center;
+  padding:60px 10px;
+  color:var(--muted);
+  grid-column: 1 / -1;
+}
+
+/* optional loading skeleton */
+.cardSkeleton{
+  background: linear-gradient(90deg,#f3f4f6,#eef1f3,#f3f4f6);
+  border-radius:12px;
+  height: 100%;
+  min-height: 260px;
+  animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer {
+  0%{ background-position: -400px 0; }
+  100%{ background-position: 400px 0; }
+}
+
+/* responsive */
+@media (max-width: 1000px) {
+  .projectsGrid{ grid-template-columns: repeat(2, 1fr); }
+  .filterInput { min-width:130px; }
+}
+@media (max-width: 620px) {
+  .projectsGrid{ grid-template-columns: 1fr; }
+  .projectsFilters{ flex-direction: column; width: 100%; align-items:stretch; gap:10px; }
+  .filterInput{ width:100%; }
+  .projectsHeader { align-items:flex-start; gap:10px; flex-direction:column; }
+}
+@media (max-width: 620px) {
+  .projectsFilters select {
+    min-width: 100%;
+    background-position: right 12px center;
+  }
+}

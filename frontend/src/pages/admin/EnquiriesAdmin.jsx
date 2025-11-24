@@ -1,7 +1,7 @@
 // src/pages/admin/EnquiriesAdmin.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import Dropdown from "../../components/Dropdown";
-import "../../assets/pages/admin/EnquiriesAdmin.css";
+import styles from "../../assets/pages/admin/EnquiriesAdmin.module.css";
 import toast from "react-hot-toast";
 import EnquiriesExportModal from "./EnquiriesExportModal";
 import { auth } from "../../firebaseConfig";
@@ -12,7 +12,6 @@ const BACKEND_BASE =
   (typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "http://localhost:5000"
     : "");
-
 
 const DEFAULT_VISIBLE_COLS = [
   "enquiry_id",
@@ -85,61 +84,47 @@ export default function EnquiriesAdmin() {
   const [editBody, setEditBody] = useState({});
 
   // --- Helpers for auth headers (handles race conditions) ---
-  // safe polling-getAuthToken: polls storages + Firebase until token or timeout
-async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
-  const start = Date.now();
+  async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
+    const start = Date.now();
 
-  // small helper to read storages safely
-  const readStored = () => {
-    try {
-      const l = localStorage.getItem("auth_token");
-      if (l && l !== "null" && l !== "") return l;
-    } catch (e) { /* ignore storage access errors */ }
-    return null;
-  };
+    const readStored = () => {
+      try {
+        const l = localStorage.getItem("auth_token");
+        if (l && l !== "null" && l !== "") return l;
+      } catch (e) {}
+      return null;
+    };
 
-  while (Date.now() - start < timeoutMs) {
-    // 1) quick check storages
-    const stored = readStored();
-    if (stored) return stored;
+    while (Date.now() - start < timeoutMs) {
+      const stored = readStored();
+      if (stored) return stored;
 
-    // 2) try Firebase currentUser token if available
+      try {
+        if (auth && auth.currentUser) {
+          const idToken = await auth.currentUser.getIdToken(false);
+          if (idToken) {
+            try { localStorage.setItem("auth_token", idToken); } catch (e) {}
+            return idToken;
+          }
+        }
+      } catch (err) {}
+
+      await new Promise((res) => setTimeout(res, intervalMs));
+    }
+
     try {
       if (auth && auth.currentUser) {
-        const idToken = await auth.currentUser.getIdToken(false); // don't force refresh first
+        const idToken = await auth.currentUser.getIdToken(true);
         if (idToken) {
-          // cache for future sync
           try { localStorage.setItem("auth_token", idToken); } catch (e) {}
+          try { sessionStorage.setItem("auth_token", idToken); } catch (e) {}
           return idToken;
         }
       }
-    } catch (err) {
-      // non-fatal: firebase might not be ready yet
-      // console.warn("getAuthToken: firebase attempt failed", err);
-    }
+    } catch (err) {}
 
-    // wait briefly then retry
-    await new Promise((res) => setTimeout(res, intervalMs));
+    return null;
   }
-
-  // final attempt with forced refresh from Firebase (in case cached token is stale)
-  try {
-    if (auth && auth.currentUser) {
-      const idToken = await auth.currentUser.getIdToken(true); // force refresh
-      if (idToken) {
-        try { localStorage.setItem("auth_token", idToken); } catch (e) {}
-        try { sessionStorage.setItem("auth_token", idToken); } catch (e) {}
-        return idToken;
-      }
-    }
-  } catch (err) {
-    // ignore
-  }
-
-  // nothing found within timeout
-  return null;
-}
-
 
   async function makeHeaders() {
     const token = await getAuthToken();
@@ -364,39 +349,38 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
   };
 
   const deleteRow = async (row) => {
-  showDeleteConfirm({
-    title: "Delete Enquiry?",
-    message: `Delete enquiry #${row.enquiry_id} from "${row.table}"? This cannot be undone.`,
-    onConfirm: async () => {
-      try {
-        const headers = await makeHeaders();
+    showDeleteConfirm({
+      title: "Delete Enquiry?",
+      message: `Delete enquiry #${row.enquiry_id} from "${row.table}"? This cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const headers = await makeHeaders();
 
-        const res = await fetch(
-          `${BACKEND_BASE}/api/enquiries/${encodeURIComponent(
-            row.table
-          )}/${encodeURIComponent(row.enquiry_id)}`,
-          {
-            method: "DELETE",
-            headers,
-            credentials: "include",
+          const res = await fetch(
+            `${BACKEND_BASE}/api/enquiries/${encodeURIComponent(
+              row.table
+            )}/${encodeURIComponent(row.enquiry_id)}`,
+            {
+              method: "DELETE",
+              headers,
+              credentials: "include",
+            }
+          );
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            toast.error("Delete failed: " + (err.error || res.status));
+          } else {
+            toast.success("Deleted");
+            refresh();
           }
-        );
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          toast.error("Delete failed: " + (err.error || res.status));
-        } else {
-          toast.success("Deleted");
-          refresh();
+        } catch (err) {
+          console.error("delete err", err);
+          toast.error("Delete error");
         }
-      } catch (err) {
-        console.error("delete err", err);
-        toast.error("Delete error");
-      }
-    },
-  });
-};
-
+      },
+    });
+  };
 
   const renderCellVal = (row, key) => {
     const v = row[key];
@@ -433,7 +417,7 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
     if (end - start + 1 < maxButtons) start = Math.max(1, end - maxButtons + 1);
     for (let p = start; p <= end; p++) pages.push(p);
     return pages.map((p) => (
-      <button key={p} onClick={() => goToPage(p)} className={`btn-small ${p === page ? "active-page" : ""}`} aria-current={p === page ? "page" : undefined} style={{ marginRight: 6 }}>
+      <button key={p} onClick={() => goToPage(p)} className={`${styles.btnSmall} ${p === page ? styles.activePage : ""}`} aria-current={p === page ? "page" : undefined} style={{ marginRight: 6 }}>
         {p}
       </button>
     ));
@@ -442,12 +426,12 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
   // small inner components to keep JSX tidy
   const TableToggle = () => {
     const btn = (key, label) => (
-      <button key={key} className={`btn table-toggle-btn ${table === key ? "active-table" : ""}`} onClick={() => setTable(key)} aria-pressed={table === key}>
+      <button key={key} className={`${styles.tableToggleBtn} ${table === key ? styles.activeTable : ""}`} onClick={() => setTable(key)} aria-pressed={table === key}>
         {label}
       </button>
     );
     return (
-      <div style={{ display: "flex", flexWrap:"wrap", gap: 5, alignItems: "center" }}>
+      <div className={styles.tableToggleWrap}>
         {btn("home", "Home")}
         {btn("custom", "Custom")}
         {btn("kb", "Kitchen / Bathroom")}
@@ -457,68 +441,99 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
   };
 
   return (
-    <div className="enquiries-admin-page">
-      <div className="controls-row">
-        <div className="left-controls" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <label className="control-label">Viewing</label>
+    <div className={styles.enquiriesAdminPage}>
+      <div className={styles.controlsRow}>
+        <div className={styles.controlsLeft}>
+          <div className={styles.controlsGroup}>
+            <label className={styles.controlLabel}>Viewing</label>
             <TableToggle />
           </div>
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ fontSize: 12, color: "#333", fontWeight: 700, marginBottom: 6 }}>City</div>
-              <Dropdown id="city-filter" value={cityFilter} onChange={(v) => { setCityFilter(v); setPage(1); }} options={[{ value: "", label: "All cities" }, ...availableCities.map((c) => ({ value: c, label: c }))]} placeholder="All cities" includeAll={false} />
+          <div className={styles.filtersWrap}>
+            <div className={styles.filterGroup}>
+              <div className={styles.filterLabel}>City</div>
+              <Dropdown
+                id="city-filter"
+                value={cityFilter}
+                onChange={(v) => { setCityFilter(v); setPage(1); }}
+                options={[{ value: "", label: "All cities" }, ...availableCities.map((c) => ({ value: c, label: c }))]}
+                placeholder="All cities"
+                includeAll={false}
+              />
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ fontSize: 12, color: "#333", fontWeight: 700, marginBottom: 6 }}>Type</div>
-              <Dropdown id="type-filter" value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={[{ value: "", label: "All types" }, ...availableTypes.map((t) => ({ value: t, label: t }))]} placeholder="All types" includeAll={false} />
+            <div className={styles.filterGroup}>
+              <div className={styles.filterLabel}>Type</div>
+              <Dropdown
+                id="type-filter"
+                value={typeFilter}
+                onChange={(v) => { setTypeFilter(v); setPage(1); }}
+                options={[{ value: "", label: "All types" }, ...availableTypes.map((t) => ({ value: t, label: t }))]}
+                placeholder="All types"
+                includeAll={false}
+              />
             </div>
 
-            <div style={{ background: "#BFADA3", padding: "10px", borderRadius: "8px" }}>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <div style={{ display: "flex", flexDirection: "column", minWidth: 160 }}>
-                  <div style={{ fontSize: 12, color: "#333", fontWeight: 700, marginBottom: 6 }}>Search by</div>
-                  <Dropdown id="search-col" value={searchCol} onChange={(v) => { setSearchCol(v); setPage(1); }} options={[{ value: "", label: "Any column" }, ...availableSearchCols.map((c) => ({ value: c, label: c }))]} placeholder="Choose column" includeAll={false} />
+            <div className={styles.searchPanel}>
+              <div className={styles.searchInner}>
+                <div className={styles.filterCol}>
+                  <div className={styles.filterLabel}>Search by</div>
+                  <Dropdown
+                    id="search-col"
+                    value={searchCol}
+                    onChange={(v) => { setSearchCol(v); setPage(1); }}
+                    options={[{ value: "", label: "Any column" }, ...availableSearchCols.map((c) => ({ value: c, label: c }))]}
+                    placeholder="Choose column"
+                    includeAll={false}
+                  />
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", minWidth: 220 }}>
-                  <div style={{ fontSize: 12, color: "#333", fontWeight: 700, marginBottom: 6 }}>Value</div>
-                  <input value={searchValue} onChange={(e) => { setSearchValue(e.target.value); setPage(1); }} placeholder="Type to search..." style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(15,23,30,0.06)", background: "#fff", outline: "none", minWidth: 220 }} />
+                <div className={styles.filterCol}>
+                  <div className={styles.filterLabel}>Value</div>
+                  <input
+                    value={searchValue}
+                    onChange={(e) => { setSearchValue(e.target.value); setPage(1); }}
+                    placeholder="Type to search..."
+                    className={styles.searchInput}
+                  />
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Columns + Page size */}
-        <div style={{ marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <div>
-            <label style={{ fontWeight: 700, marginRight: 8 }}>Columns</label>
-            <div style={{ display: "inline-block", zIndex: "0", minWidth: 260 }}>
-              <Dropdown id="cols-dropdown" value={visibleCols} onChange={(vals) => setVisibleCols(Array.isArray(vals) ? vals : [])} options={columns.map((c) => ({ value: c, label: c }))} placeholder="Select columns" multiple={true} includeAll={false} />
+        <div className={styles.controlsRight}>
+          <div className={styles.columnsWrap}>
+            <label className={styles.controlLabelInline}>Columns</label>
+            <div className={styles.colsDropdown}>
+              <Dropdown
+                id="cols-dropdown"
+                value={visibleCols}
+                onChange={(vals) => setVisibleCols(Array.isArray(vals) ? vals : [])}
+                options={columns.map((c) => ({ value: c, label: c }))}
+                placeholder="Select columns"
+                multiple={true}
+                includeAll={false}
+              />
             </div>
           </div>
-        </div>
 
-        <div className="right-controls" style={{ alignItems: "flex-end" }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button className="btn refresh" onClick={refresh}>Refresh</button>
-            <button className="btn" onClick={() => setShowExportModal(true)} style={{ marginLeft: 8 }}>Export CSV</button>
+          <div className={styles.actionsWrap}>
+            <button className={`${styles.btn} ${styles.btnRefresh}`} onClick={refresh}>Refresh</button>
+            <button className={styles.btn} onClick={() => setShowExportModal(true)} style={{ marginLeft: 8 }}>Export CSV</button>
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="table-wrap">
+      <div className={styles.tableWrap}>
         {loading ? (
-          <div className="loading">Loading enquiries…</div>
+          <div className={styles.loading}>Loading enquiries…</div>
         ) : filteredItems.length === 0 ? (
-          <div className="empty">No enquiries found.</div>
+          <div className={styles.empty}>No enquiries found.</div>
         ) : (
           <>
-            <table className="enquiries-table">
+            <table className={styles.enquiriesTable}>
               <thead>
                 <tr>
                   {(visibleCols.length ? visibleCols : columns).map((c) => <th key={c}>{c}</th>)}
@@ -534,39 +549,39 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
 
                   return (
                     <React.Fragment key={`${row.table}-${row.enquiry_id || Math.random()}`}>
-                      <tr className={`row-main ${isExpanded ? "expanded" : ""}`}>
+                      <tr className={`${styles.rowMain} ${isExpanded ? styles.expandedRow : ""}`}>
                         {shownCols.map((c) => (
-                          <td key={c} className={c === "name" ? "name-cell" : ""}>
-                            {c === "name" ? <button className="name-btn" onClick={() => handleNameClick(row)}>{row.name || "—"}</button> : renderCellVal(row, c)}
+                          <td key={c} className={c === "name" ? styles.nameCell : ""}>
+                            {c === "name" ? <button className={styles.nameBtn} onClick={() => handleNameClick(row)}>{row.name || "—"}</button> : renderCellVal(row, c)}
                           </td>
                         ))}
                         <td>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <button className="btn-small" onClick={() => openEdit(row)}>Edit</button>
-                            <button className="btn-small" onClick={() => deleteRow(row)}>Delete</button>
+                          <div className={styles.rowActions}>
+                            <button className={styles.btnSmall} onClick={() => openEdit(row)}>Edit</button>
+                            <button className={styles.btnSmall} onClick={() => deleteRow(row)}>Delete</button>
                           </div>
                         </td>
                       </tr>
 
                       {isExpanded && (
-                        <tr className="row-expanded">
+                        <tr className={styles.rowExpanded}>
                           <td colSpan={Math.max(1, shownCols.length + 1)}>
-                            <div className="expanded-panel">
-                              <div className="expanded-header">
+                            <div className={styles.expandedPanel}>
+                              <div className={styles.expandedHeader}>
                                 <strong>Other enquiries for {row.name || row.user_phone || row.email}</strong>
                                 <div style={{ display: "flex", gap: 8 }}>
-                                  <button className="btn-small" onClick={() => { setRelatedMap((m) => ({ ...m, [personKey]: undefined })); handleNameClick(row); }}>Refresh</button>
+                                  <button className={styles.btnSmall} onClick={() => { setRelatedMap((m) => ({ ...m, [personKey]: undefined })); handleNameClick(row); }}>Refresh</button>
                                 </div>
                               </div>
 
                               {loadingRelated && !relatedMap[personKey] ? (
                                 <div>Loading…</div>
                               ) : (
-                                <div className="related-list">
+                                <div className={styles.relatedList}>
                                   {(relatedMap[personKey] || []).length === 0 ? (
-                                    <div className="none">No other enquiries found for this person.</div>
+                                    <div className={styles.none}>No other enquiries found for this person.</div>
                                   ) : (
-                                    <table className="related-table">
+                                    <table className={styles.relatedTable}>
                                       <thead>
                                         <tr><th>Source</th><th>Created</th><th>City</th><th>Contact</th><th>Details</th></tr>
                                       </thead>
@@ -596,20 +611,20 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
             </table>
 
             {/* Pagination */}
-            <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <button className="btn-small" onClick={() => goToPage(1)} disabled={page === 1}>« First</button>
-                <button className="btn-small" onClick={() => goToPage(page - 1)} disabled={page === 1}>‹ Prev</button>
+            <div className={styles.paginationWrap}>
+              <div className={styles.paginationLeft}>
+                <button className={styles.btnSmall} onClick={() => goToPage(1)} disabled={page === 1}>« First</button>
+                <button className={styles.btnSmall} onClick={() => goToPage(page - 1)} disabled={page === 1}>‹ Prev</button>
                 {renderPageNumbers()}
-                <button className="btn-small" onClick={() => goToPage(page + 1)} disabled={page === totalPagesComputed}>Next ›</button>
-                <button className="btn-small" onClick={() => goToPage(totalPagesComputed)} disabled={page === totalPagesComputed}>Last »</button>
+                <button className={styles.btnSmall} onClick={() => goToPage(page + 1)} disabled={page === totalPagesComputed}>Next ›</button>
+                <button className={styles.btnSmall} onClick={() => goToPage(totalPagesComputed)} disabled={page === totalPagesComputed}>Last »</button>
               </div>
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-               <div style={{ fontSize: 13, color: "#333", fontWeight: 700 }}>Rows: {totalRows} | Page: {page}/{totalPagesComputed}</div>
+              <div className={styles.paginationCenter}>
+                <div className={styles.rowsInfo}>Rows: {totalRows} | Page: {page}/{totalPagesComputed}</div>
 
                 <Dropdown id="page-size" value={String(pageSize)} onChange={(v) => { setPageSize(Number(v)); setPage(1); }} options={[{ value: "10", label: "10 / page" }, { value: "25", label: "25 / page" }, { value: "50", label: "50 / page" }]} placeholder="Page size" includeAll={false} />
               </div>
-              <div style={{ fontSize: 13, color: "#333" }}>Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, totalRows)} of {totalRows}</div>
+              <div className={styles.paginationRight}>Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, totalRows)} of {totalRows}</div>
             </div>
           </>
         )}
@@ -619,26 +634,26 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
 
       {/* Edit modal */}
       {editingRow && (
-        <div className="modal-backdrop" onClick={closeEdit}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalBackdrop} onClick={closeEdit}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3>Edit Enquiry</h3>
-            <div style={{ display: "grid", gap: 8, maxHeight: "60vh", overflow: "auto" }}>
+            <div className={styles.editFormGrid}>
               {Object.keys(editBody).map((k) => {
                 if (k === "table" || k === "enquiry_id") return null;
                 const val = editBody[k];
                 const isTextArea = typeof val === "string" && val.length > 120;
                 return (
-                  <label style={{ display: "block" }} key={k}>
-                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{k}</div>
+                  <label className={styles.editField} key={k}>
+                    <div className={styles.editFieldLabel}>{k}</div>
                     {isTextArea ? <textarea value={editBody[k] || ""} onChange={(e) => setEditBody((s) => ({ ...s, [k]: e.target.value }))} /> : <input value={editBody[k] ?? ""} onChange={(e) => setEditBody((s) => ({ ...s, [k]: e.target.value }))} />}
                   </label>
                 );
               })}
             </div>
 
-            <div style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button className="btn" onClick={closeEdit}>Cancel</button>
-              <button className="btn primary" onClick={submitEdit}>Save</button>
+            <div className={styles.modalActions}>
+              <button className={styles.btn} onClick={closeEdit}>Cancel</button>
+              <button className={`${styles.btn} ${styles.primary}`} onClick={submitEdit}>Save</button>
             </div>
           </div>
         </div>

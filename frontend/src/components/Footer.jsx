@@ -1,30 +1,38 @@
 // src/components/Footer.jsx
 import React from "react";
-import "../assets/components/Footer.css";
+import styles from "../assets/components/Footer.module.css";
 import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
-    <footer className="site-footer">
-      <div className="footer-inner">
+    <footer className={styles.siteFooter}>
+      <div className={styles.footerInner}>
 
-        {/* Left: Brand Info */}
-        <div className="footer-brand">
-          <h3>ATEN</h3>
-          <p>Interio • Realty • Engineering</p>
+        {/* Left: Brand Info (uses uploaded image as decorative visual) */}
+        <div className={styles.footerBrand}>
+          {/* Use the uploaded image as a small brand visual. Path: /mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png */}
+          <img
+            src="/atenwhitelogo.png"
+            alt="Aten brand"
+            className={styles.brandImage}
+          />
+          <div>
+            <h3 className={styles.brandTitle}>ATEN</h3>
+            <p className={styles.brandTag}>Interio • Realty • Engineering</p>
+          </div>
         </div>
 
         {/* Middle: Quick Links */}
-        <div className="footer-links">
-          <Link to="/interio">Interio</Link>
-          <Link to="/projects">Realty</Link>
-          <Link to="/engineering">Engineering</Link>
-        </div>
+        <nav className={styles.footerLinks} aria-label="Footer quick links">
+          <Link to="/interio" className={styles.link}>Interio</Link>
+          <Link to="/projects" className={styles.link}>Realty</Link>
+          <Link to="/engineering" className={styles.link}>Engineering</Link>
+        </nav>
 
         {/* Right: Social Icons */}
-        <div className="footer-social">
-          <a href="#" aria-label="Instagram">
-            <svg width="22" height="22" viewBox="0 0 24 24">
+        <div className={styles.footerSocial} aria-hidden={false}>
+          <a href="#" aria-label="Instagram" className={styles.iconLink}>
+            <svg width="22" height="22" viewBox="0 0 24 24" className={styles.icon} role="img" aria-hidden="true">
               <path
                 fill="currentColor"
                 d="M7 2C4.243 2 2 4.243 2 7v10c0 
@@ -40,8 +48,8 @@ export default function Footer() {
             </svg>
           </a>
 
-          <a href="#" aria-label="Facebook">
-            <svg width="22" height="22" viewBox="0 0 24 24">
+          <a href="#" aria-label="Facebook" className={styles.iconLink}>
+            <svg width="22" height="22" viewBox="0 0 24 24" className={styles.icon} role="img" aria-hidden="true">
               <path
                 fill="currentColor"
                 d="M22 12a10 10 0 10-11.5 9.87v-6.99H8v-2.88h2.5V9.41c0-2.46 
@@ -53,8 +61,8 @@ export default function Footer() {
             </svg>
           </a>
 
-          <a href="#" aria-label="Twitter">
-            <svg width="22" height="22" viewBox="0 0 24 24">
+          <a href="#" aria-label="Twitter" className={styles.iconLink}>
+            <svg width="22" height="22" viewBox="0 0 24 24" className={styles.icon} role="img" aria-hidden="true">
               <path
                 fill="currentColor"
                 d="M22.46 6c-.77.35-1.6.59-2.46.69a4.28 
@@ -74,7 +82,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="footer-bottom">
+      <div className={styles.footerBottom}>
         © {new Date().getFullYear()} ATEN • All rights reserved.
       </div>
     </footer>

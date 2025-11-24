@@ -1,12 +1,10 @@
-// File: src/pages/HomeEnquiry.jsx
+// src/pages/HomeEnquiry.jsx
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import OptionGroup from "../components/OptionGroup";
-import "../assets/pages/HomeEnquiry.css";
+import styles from "../assets/pages/HomeEnquiry.module.css";
 import toast from "react-hot-toast";
 import Dropdown from "../components/Dropdown";
-
-// -- add (or restore) these in src/pages/HomeEnquiry.jsx near the top --
 
 const THEMES = [
   { id: "modern", label: "Modern", image: "/bathroom1.jpg", bullets: ["Clean lines", "Neutral palette"] },
@@ -39,32 +37,20 @@ const TYPE_OPTIONS = [
   { value: "studio", label: "Studio" }
 ];
 
-
-// other data (THEMES, MATERIALS, KITCHENS) same as before...
-
 export default function HomeEnquiry() {
-  const params = useParams();          // ← GET URL PARAM
-  const preSelectedType = params.type; // example: "2BHK"
+  const params = useParams();
+  const preSelectedType = params.type;
 
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [selectedKitchen, setSelectedKitchen] = useState(null);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
 
-  const [extraBhk, setExtraBhk] = useState("");   // <-- NEW FIELD FOR CUSTOM BHK
-
-  const [form, setForm] = useState({
-    email: "",
-    type: "",
-    area: "",
-    bathroom_number: "",
-    city: "",
-  });
+  const [extraBhk, setExtraBhk] = useState("");
+  const [form, setForm] = useState({ email: "", type: "", area: "", bathroom_number: "", city: "" });
 
   useEffect(() => {
     if (preSelectedType) {
       let norm = preSelectedType.toUpperCase().replace(/\s+/g, "");
-
-      // Accept "4+BHK" or "4plus" from URL
       if (norm === "4+BHK" || norm === "4PLUS" || norm === "4PLUSBHK") {
         setForm((f) => ({ ...f, type: "4+ BHK" }));
       } else {
@@ -74,7 +60,6 @@ export default function HomeEnquiry() {
   }, [preSelectedType]);
 
   const [loading, setLoading] = useState(false);
-
   const steps = [
     { key: "theme", label: "Theme" },
     { key: "kitchen", label: "Kitchen type" },
@@ -92,24 +77,16 @@ export default function HomeEnquiry() {
     return f ? f.label : id;
   }
 
-  function goNext() {
-    setActiveStep((s) => Math.min(steps.length - 1, s + 1));
-  }
-  function goPrev() {
-    setActiveStep((s) => Math.max(0, s - 1));
-  }
+  function goNext() { setActiveStep((s) => Math.min(steps.length - 1, s + 1)); }
+  function goPrev() { setActiveStep((s) => Math.max(0, s - 1)); }
 
   async function handleSubmit(e) {
     e.preventDefault();
-
     if (!form.email.trim()) {
       toast.error("Please enter email");
       return;
     }
-
     let finalType = form.type;
-
-    // if 4+ BHK → override with exact number
     if (form.type === "4+ BHK") {
       if (!extraBhk.trim()) {
         toast.error("Please enter exact BHK for 4+ homes");
@@ -142,8 +119,9 @@ export default function HomeEnquiry() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Server error");
-
       toast.success("Enquiry submitted!");
+      setForm({ email: "", type: "", area: "", bathroom_number: "", city: "" });
+      setSelectedTheme(null); setSelectedKitchen(null); setSelectedMaterials([]); setExtraBhk("");
     } catch (err) {
       toast.error("Failed to submit enquiry");
     } finally {
@@ -152,11 +130,11 @@ export default function HomeEnquiry() {
   }
 
   return (
-    <div className="home-enquiry-page wide-left">
-      <div className="left-panel">
+    <div className={`${styles.homeEnquiryPage} wide-left`}>
+      <div className={styles.leftPanel}>
         <h3>Choose options</h3>
 
-        <div className="progress-bar">
+        <div className={styles.progressBar}>
           {steps.map((s, idx) => {
             const completed = idx < activeStep;
             const active = idx === activeStep;
@@ -164,11 +142,11 @@ export default function HomeEnquiry() {
               <button
                 key={s.key}
                 type="button"
-                className={"step " + (active ? "active" : completed ? "completed" : "")}
+                className={`${styles.step} ${active ? styles.stepActive : completed ? styles.stepCompleted : ""}`}
                 onClick={() => setActiveStep(idx)}
               >
-                <div className="step-index">{idx + 1}</div>
-                <div className="step-label">{s.label}</div>
+                <div className={styles.stepIndex}>{idx + 1}</div>
+                <div>{s.label}</div>
               </button>
             );
           })}
@@ -185,26 +163,19 @@ export default function HomeEnquiry() {
             <OptionGroup title="Material" options={MATERIALS} multi={true} selected={selectedMaterials} onChange={setSelectedMaterials} />
           )}
 
-          <div className="step-nav">
-            <button type="button" className="nav-btn" onClick={goPrev} disabled={activeStep === 0}>Previous</button>
-            <button type="button" className="nav-btn" onClick={goNext} disabled={activeStep === steps.length - 1}>Next</button>
+          <div className={styles.stepNav}>
+            <button type="button" className={styles.navBtn} onClick={goPrev} disabled={activeStep === 0}>Previous</button>
+            <button type="button" className={styles.navBtn} onClick={goNext} disabled={activeStep === steps.length - 1}>Next</button>
           </div>
         </div>
       </div>
 
-      <div className="right-panel narrow-form">
+      <div className={styles.rightPanel}>
         <h2>Home Enquiry</h2>
-        <form className="enquiry-form" onSubmit={handleSubmit}>
-          
+        <form className={styles.enquiryForm} onSubmit={handleSubmit}>
           <label>
             Email *
-            <input
-              name="email"
-              value={form.email}
-              onChange={handleFormChange}
-              type="email"
-              placeholder="you@example.com"
-            />
+            <input name="email" value={form.email} onChange={handleFormChange} type="email" placeholder="you@example.com" />
           </label>
 
           <label>
@@ -213,25 +184,15 @@ export default function HomeEnquiry() {
               id="type"
               options={TYPE_OPTIONS}
               value={form.type || ""}
-              onChange={(val) => {
-                setForm((s) => ({ ...s, type: val }));
-                if (val !== "4+ BHK") setExtraBhk("");
-              }}
+              onChange={(val) => { setForm((s) => ({ ...s, type: val })); if (val !== "4+ BHK") setExtraBhk(""); }}
               placeholder="Select BHK type"
             />
           </label>
 
-          {/* NEW EXTRA FIELD FOR 4+ BHK */}
           {form.type === "4+ BHK" && (
             <label>
               Enter exact BHK count *
-              <input
-                type="number"
-                min="5"
-                placeholder="e.g. 5"
-                value={extraBhk}
-                onChange={(e) => setExtraBhk(e.target.value)}
-              />
+              <input type="number" min="5" placeholder="e.g. 5" value={extraBhk} onChange={(e) => setExtraBhk(e.target.value)} />
             </label>
           )}
 
@@ -242,13 +203,7 @@ export default function HomeEnquiry() {
 
           <label>
             Number of bathrooms
-            <input
-              name="bathroom_number"
-              value={form.bathroom_number}
-              onChange={handleFormChange}
-              type="number"
-              min="0"
-            />
+            <input name="bathroom_number" value={form.bathroom_number} onChange={handleFormChange} type="number" min="0" />
           </label>
 
           <label>
@@ -256,20 +211,17 @@ export default function HomeEnquiry() {
             <input name="city" value={form.city} onChange={handleFormChange} type="text" />
           </label>
 
-          <div className="selected-summary">
-            {selectedTheme && <span className="chip">{findLabel(THEMES, selectedTheme)}<button className="chip-remove" onClick={() => setSelectedTheme(null)}>×</button></span>}
-            {selectedKitchen && <span className="chip">{findLabel(KITCHENS, selectedKitchen)}<button className="chip-remove" onClick={() => setSelectedKitchen(null)}>×</button></span>}
+          <div className={styles.selectedSummary}>
+            {selectedTheme && <span className={styles.chip}>{findLabel(THEMES, selectedTheme)}<button className={styles.chipRemove} onClick={() => setSelectedTheme(null)}>×</button></span>}
+            {selectedKitchen && <span className={styles.chip}>{findLabel(KITCHENS, selectedKitchen)}<button className={styles.chipRemove} onClick={() => setSelectedKitchen(null)}>×</button></span>}
             {selectedMaterials.map((m) => (
-              <span key={m} className="chip">{findLabel(MATERIALS, m)}<button className="chip-remove" onClick={() => setSelectedMaterials(selectedMaterials.filter(x => x !== m))}>×</button></span>
+              <span key={m} className={styles.chip}>{findLabel(MATERIALS, m)}<button className={styles.chipRemove} onClick={() => setSelectedMaterials(selectedMaterials.filter(x => x !== m))}>×</button></span>
             ))}
           </div>
 
-          <div className="form-actions">
-            <button type="submit" className="submit-btn" disabled={loading}>
-              {loading ? "Saving..." : "Submit Enquiry"}
-            </button>
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button type="submit" className={styles.submitBtn} disabled={loading}>{loading ? "Saving..." : "Submit Enquiry"}</button>
           </div>
-
         </form>
       </div>
     </div>

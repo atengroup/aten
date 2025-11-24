@@ -35,19 +35,103 @@ function looksAbsoluteUrl(s) {
 }
 
 /* -------------------------
-   Image helper (getImageUrl)
-   - keeps original behaviour: absolute urls returned unchanged
-   - absolute path (starts with /) is prefixed with VITE_BACKEND_BASE
-   - raw storage path returns as-is (legacy)
+   Public Supabase storage helpers & blob fetching
    ------------------------- */
+
+/**
+ * Build a public Supabase storage URL (if env vars present)
+ * Expects:
+ *  - VITE_SUPABASE_URL e.g., "https://abcd1234.supabase.co"
+ *  - VITE_SUPABASE_PUBLIC_BUCKET e.g., "uploads" or "public"
+ *
+ * Returns absolute url if possible, otherwise null.
+ */
+function getPublicStorageUrl(storagePath) {
+  if (!storagePath) return null;
+
+  const SUPA_URL = import.meta.env.VITE_SUPABASE_URL || "";
+  const SUPA_BUCKET = import.meta.env.VITE_SUPABASE_PUBLIC_BUCKET || "";
+
+  // normalize storagePath: remove any leading slashes
+  const normalized = String(storagePath).replace(/^\/+/, "");
+
+  if (SUPA_URL && SUPA_BUCKET) {
+    // ensure no trailing slash on SUPA_URL
+    const base = SUPA_URL.replace(/\/+$/, "");
+    // If the storagePath already contains the bucket (e.g., "uploads/..." ), avoid duplicating
+    // but our expected storagePath is the path *inside* the bucket e.g., "testimonials/abc.jpg"
+    // If the user stored "uploads/..." and the bucket is "uploads", remove the bucket duplicate.
+    const bucketSegment = SUPA_BUCKET.replace(/^\/+|\/+$/g, "");
+    let finalPath = normalized;
+    if (normalized.startsWith(`${bucketSegment}/`)) {
+      finalPath = normalized.slice(bucketSegment.length + 1);
+    }
+    return `${base}/storage/v1/object/public/${encodeURIComponent(bucketSegment)}/${finalPath}`;
+  }
+
+  // env not configured -> cannot build public url here
+  return null;
+}
+
+/**
+ * Fetches the image as a blob (via signed url/public url) and returns a stable object URL.
+ * Useful if you want image to keep displaying after a (signed) url expires.
+ * Caller must revoke the returned objectUrl with URL.revokeObjectURL when done.
+ */
+export async function fetchImageBlobObjectUrl(signedOrPublicUrl) {
+  if (!looksAbsoluteUrl(signedOrPublicUrl)) throw new Error("signedOrPublicUrl must be absolute");
+  const resp = await fetch(signedOrPublicUrl, { method: "GET" });
+  if (!resp.ok) {
+    const err = new Error(`Failed to fetch image blob (${resp.status})`);
+    err.status = resp.status;
+    throw err;
+  }
+  const blob = await resp.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  return objectUrl;
+}
+
+/* -------------------------
+   Image helper (getImageUrl)
+   - absolute urls returned unchanged
+   - root-relative public assets (e.g. /bedroom1.jpg) returned unchanged (so frontend serves them)
+   - server/storage paths (e.g. /uploads/..., /storage/v1/...) are prefixed with BACKEND_BASE
+   - raw storage path 'uploads/...' will try to be converted to public Supabase URL via getPublicStorageUrl()
+   ------------------------- */
+
 export function getImageUrl(pathOrUrl) {
   if (!pathOrUrl) return "";
   const s = String(pathOrUrl).trim();
-  if (/^https?:\/\//i.test(s)) return s; // signed/public URL -> return unchanged
-  // if it's an absolute path returned by server (e.g., '/uploads/xyz.jpg'), prefix backend base
+  // already absolute
+  if (/^https?:\/\//i.test(s)) return s;
+
   const BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE || "";
-  if (s.startsWith("/")) return `${BACKEND_BASE}${s}`;
-  // if it's a raw storage path like 'projects/abc.jpg', return as-is (client should call server to get signed URL)
+
+  // If starts with slash, decide if this is a server/storage path or a public-front asset
+  if (s.startsWith("/")) {
+    // Treat only known server/storage prefixes as server-managed paths which should be prefixed
+    const serverPrefixes = ["/uploads/", "/storage/", "/storage/v1/", "/api/uploads/", "/api/signed-url/"];
+    const lower = s.toLowerCase();
+    const isServerPath = serverPrefixes.some((pref) => lower.startsWith(pref.toLowerCase()));
+
+    if (isServerPath) {
+      // Prefix with backend base (may be empty string) so these resolve to your backend/supabase endpoints
+      return `${BACKEND_BASE}${s}`;
+    }
+
+    // Otherwise treat as a public/root asset and return unchanged (so it loads from frontend's public/)
+    return s;
+  }
+
+  // Not starting with slash; could be a raw storage path like "uploads/abc.jpg"
+  try {
+    const pub = getPublicStorageUrl(s);
+    if (pub) return pub;
+  } catch (e) {
+    // ignore and fallthrough
+  }
+
+  // fallback: return as-is (may be relative path)
   return s;
 }
 
@@ -107,11 +191,12 @@ export async function apiFetch(path, opts = {}) {
 export default { getImageUrl, getAuthToken, sendWithAuth, apiFetch };
 
 /* -------------------------
-   New helpers for signed URLs & blob fetching
+   Remaining helpers that use getPublicStorageUrl/getSignedUrlFromServer
    ------------------------- */
 
 /**
  * Ask your backend for a signed URL for `storagePath`.
+ * Kept for backward compatibility in case env vars are not set.
  * Backend endpoint expected: GET /api/signed-url?path=<storagePath>&expires=<seconds>
  * Response expected: { url: "<signedUrl>", expires: <seconds> } (or { url: "<signedUrl>" })
  */
@@ -120,10 +205,15 @@ export async function getSignedUrlFromServer(storagePath, expires = 60) {
   // If storagePath is already absolute, just return it
   if (looksAbsoluteUrl(storagePath)) return { url: storagePath, expires: null };
 
-  // Use sendWithAuth so token is applied if your endpoint requires auth
-  const q = `?path=${encodeURIComponent(storagePath)}&expires=${encodeURIComponent(
-    String(expires)
-  )}`;
+  // FIRST: try to build public Supabase URL (if env vars present)
+  const publicUrl = getPublicStorageUrl(storagePath);
+  if (publicUrl) {
+    // return as an absolute public url (no ttl)
+    return { url: publicUrl, expires: null };
+  }
+
+  // FALLBACK: use sendWithAuth so token is applied if your endpoint requires auth
+  const q = `?path=${encodeURIComponent(storagePath)}&expires=${encodeURIComponent(String(expires))}`;
   const res = await sendWithAuth(`/api/signed-url${q}`, { method: "GET" });
   if (!res.ok) {
     const err = new Error("Failed to get signed url");
@@ -144,33 +234,15 @@ export async function getSignedUrlFromServer(storagePath, expires = 60) {
 }
 
 /**
- * Fetches the image as a blob (via signed url) and returns a stable object URL.
- * Useful if you want image to keep displaying after the signed url expires.
- * Caller must revoke the returned objectUrl with URL.revokeObjectURL when done.
- */
-export async function fetchImageBlobObjectUrl(signedUrl) {
-  if (!looksAbsoluteUrl(signedUrl)) throw new Error("signedUrl must be absolute");
-  const resp = await fetch(signedUrl, { method: "GET" });
-  if (!resp.ok) {
-    const err = new Error(`Failed to fetch image blob (${resp.status})`);
-    err.status = resp.status;
-    throw err;
-  }
-  const blob = await resp.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  return objectUrl;
-}
-
-/**
  * High level helper for the app to resolve an image preview.
  * - storagePath can be:
  *   - an absolute signed/public URL -> returned as-is
  *   - a server absolute path like '/uploads/x.jpg' -> prefixed using VITE_BACKEND_BASE (getImageUrl handles this)
- *   - a raw storage path like 'projects/a.jpg' -> request signed URL from server
+ *   - a raw storage path like 'uploads/testimonials/a.jpg' or 'testimonials/a.jpg' -> converted to public Supabase url (if VITE_SUPABASE_... envs present)
  *
  * options:
- *  - useBlob: if true, this will fetch the image blob and return an objectURL (stable after signed url expiry)
- *  - expires: requested signed url TTL (seconds) when calling backend
+ *  - useBlob: if true, this will fetch the image blob and return an objectURL (stable after url expiry)
+ *  - expires: requested signed url TTL (seconds) when calling backend (used only if env vars missing and signed url fallback is used)
  *
  * Returns: { src: string, expires: number|null, from: "absolute"|"signed"|"blob" }
  */
@@ -189,14 +261,24 @@ export async function resolveImagePreview(storagePathOrUrl, options = {}) {
     return { src: maybePrefixed, expires: null, from: "absolute" };
   }
 
-  // 3) treat as raw storage path -> ask backend for signed url
+  // 3) Try to create a public Supabase storage URL (preferred for public buckets)
+  const publicUrl = getPublicStorageUrl(storagePathOrUrl);
+  if (publicUrl) {
+    if (!useBlob) {
+      return { src: publicUrl, expires: null, from: "absolute" };
+    }
+    const objectUrl = await fetchImageBlobObjectUrl(publicUrl);
+    return { src: objectUrl, expires: null, from: "blob" };
+  }
+
+  // 4) FALLBACK: treat as raw storage path -> ask backend for signed url (kept for compatibility)
   const { url, expires: serverTtl = null } = await getSignedUrlFromServer(storagePathOrUrl, expires);
 
   if (!useBlob) {
     return { src: url, expires: serverTtl, from: "signed" };
   }
 
-  // 4) use blob method to keep the image around after url expiry
+  // 5) use blob method to keep the image around after url expiry
   const objectUrl = await fetchImageBlobObjectUrl(url);
   return { src: objectUrl, expires: serverTtl, from: "blob" };
 }

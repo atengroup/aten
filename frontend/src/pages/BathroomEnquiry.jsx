@@ -4,7 +4,11 @@ import OptionGroup from "../components/OptionGroup";
 import PhoneLoginModal from "../components/PhoneLoginModal";
 import styles from "../assets/pages/HomeEnquiry.module.css";
 import toast from "react-hot-toast";
-
+const BACKEND_BASE =
+  import.meta.env.VITE_BACKEND_BASE ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "");
 const BATHROOM_TYPES = [
   { id: "modern", label: "Modern", image: "/images/bathrooms/modern.jpg", bullets: ["Contemporary fixtures", "Clean lines"] },
   { id: "premium", label: "Premium", image: "/images/bathrooms/premium.jpg", bullets: ["Luxury finishes", "High-end fittings"] },
@@ -28,7 +32,7 @@ export default function BathroomEnquiry() {
     const payload = { user_id: uid, type: "bathroom", email: form.email || null, city: form.city || null, area: form.area || null, bathroom_type: selectedBathroomType ? findLabel(BATHROOM_TYPES, selectedBathroomType) : null };
     try {
       setLoading(true); setMessage(null);
-      const res = await fetch("/api/kb_enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await fetch("${BACKEND_BASE}/api/kb_enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Server error");
       toast.success("Bathroom enquiry saved successfully")

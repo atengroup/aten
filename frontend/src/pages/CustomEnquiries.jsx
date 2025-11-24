@@ -4,7 +4,11 @@ import Dropdown from "../components/Dropdown";
 import PhoneLoginModal from "../components/PhoneLoginModal";
 import styles from "../assets/pages/HomeEnquiry.module.css";
 import toast from "react-hot-toast";
-
+const BACKEND_BASE =
+  import.meta.env.VITE_BACKEND_BASE ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "");
 const TYPE_OPTIONS = [
   { value: "1BHK", label: "1 BHK" },
   { value: "2BHK", label: "2 BHK" },
@@ -32,7 +36,7 @@ export default function CustomEnquiry() {
     const payload = { user_id: uid, type: form.type || null, email: form.email || null, city: form.city || null, area: form.area || null, message: customMessage || null };
     try {
       setLoading(true); setMessage(null);
-      const res = await fetch("/api/custom_enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await fetch("${BACKEND_BASE}/api/custom_enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Server error");
       setMessage({ type: "success", text: "Custom enquiry saved successfully" });

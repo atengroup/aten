@@ -3,7 +3,11 @@ import React, { useState } from "react";
 import OptionGroup from "../components/OptionGroup";
 import PhoneLoginModal from "../components/PhoneLoginModal";
 import styles from "../assets/pages/HomeEnquiry.module.css";
-
+const BACKEND_BASE =
+  import.meta.env.VITE_BACKEND_BASE ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "");
 const WARDROBE_TYPES = [
   { id: "slide", label: "Sliding", image: "/images/wardrobe/slide.jpg", bullets: ["Space saving", "Modern look"] },
   { id: "swing", label: "Swing", image: "/images/wardrobe/swing.jpg", bullets: ["Traditional", "Full access"] }
@@ -44,7 +48,7 @@ export default function WardrobeEnquiry() {
     const payload = { user_id: uid, type: "wardrobe", email: form.email || null, city: form.city || null, length: lengthFt ?? null, wardrobe_type: wardrobeType ? findLabel(WARDROBE_TYPES, wardrobeType) : null, material: material ? findLabel(MATERIALS, material) : null, finish: finish ? findLabel(FINISHES, finish) : null };
     try {
       setLoading(true); setMessage(null);
-      const res = await fetch("/api/wardrobe_enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await fetch("${BACKEND_BASE}/api/wardrobe_enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Server error");
       setMessage({ type: "success", text: "Wardrobe enquiry saved successfully" });

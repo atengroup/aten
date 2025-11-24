@@ -3,7 +3,11 @@ import React, { useState } from "react";
 import OptionGroup from "../components/OptionGroup";
 import PhoneLoginModal from "../components/PhoneLoginModal";
 import styles from "../assets/pages/HomeEnquiry.module.css";
-
+const BACKEND_BASE =
+  import.meta.env.VITE_BACKEND_BASE ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "");
 const KITCHEN_TYPES = [
   { id: "modular", label: "Modular Kitchen", image: "/kitchen1.jpg", bullets: ["Fully customizable", "Optimized storage"] },
   { id: "semi-modular", label: "Semi Modular Kitchen", image: "/kitchen1.jpg", bullets: [" Customizable", "Optimized storage"] }
@@ -35,7 +39,7 @@ export default function KitchenEnquiry() {
     const payload = { user_id: uid, type: "kitchen", email: form.email || null, city: form.city || null, area: form.area || null, kitchen_type: selectedKitchenType ? findLabel(KITCHEN_TYPES, selectedKitchenType) : null, kitchen_theme: selectedKitchenTheme ? findLabel(KITCHEN_THEMES, selectedKitchenTheme) : null };
     try {
       setLoading(true); setMessage(null);
-      const res = await fetch("/api/kb_enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await fetch("${BACKEND_BASE}/api/kb_enquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Server error");
       setMessage({ type: "success", text: "Kitchen enquiry saved successfully" });

@@ -5,7 +5,11 @@ import OptionGroup from "../components/OptionGroup";
 import styles from "../assets/pages/HomeEnquiry.module.css";
 import toast from "react-hot-toast";
 import Dropdown from "../components/Dropdown";
-
+const BACKEND_BASE =
+  import.meta.env.VITE_BACKEND_BASE ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "");
 const THEMES = [
   { id: "modern", label: "Modern", image: "/bathroom1.jpg", bullets: ["Clean lines", "Neutral palette"] },
   { id: "minimal", label: "Minimal", image: "/bathroom1.jpg", bullets: ["Less is more", "Open spaces"] },
@@ -112,7 +116,7 @@ export default function HomeEnquiry() {
 
     try {
       setLoading(true);
-      const res = await fetch("/api/enquiries", {
+      const res = await fetch("${BACKEND_BASE}/api/enquiries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

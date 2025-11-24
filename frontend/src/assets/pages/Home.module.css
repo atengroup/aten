@@ -33,7 +33,7 @@
 
   /* pulled up under the header (ensure --navbar-height is used by header) */
   margin-top: calc(-1 * var(--navbar-height, 5rem));
-  padding-top: calc(64px + var(--navbar-height, 5rem));
+  padding-top: calc(80px + var(--navbar-height, 5rem));
   min-height: 350px;
   padding-bottom: 64px;
   text-align: center;

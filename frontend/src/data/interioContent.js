@@ -18,7 +18,7 @@ export const HERO_SLIDES = [
   },
   {
     id: "hero-2",
-    img: "/bedroom2.jpg",
+    img: "/kitchenhero.jpg",
     title: "Give your kitchen a fresh life",
     subtitle: "Smart layouts, durable finishes and smart storage",
     ctas: [

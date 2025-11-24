@@ -12,6 +12,11 @@ import {
   PROJECTS as STATIC_PROJECTS,
 } from "../data/interioContent";
 
+const BACKEND_BASE =
+  import.meta.env.VITE_BACKEND_BASE ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "");
 // Use the uploaded image from your session as the shared fallback URL:
 const UPLOADED_FALLBACK = "/mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png";
 const DEV_TEST_FALLBACK = UPLOADED_FALLBACK;
@@ -67,7 +72,7 @@ export default function InterioHome() {
       setTLoading(true);
       setTError("");
       try {
-        const res = await fetch(`/api/testimonials?limit=1000`);
+        const res = await fetch(`${BACKEND_BASE}/api/testimonials?limit=1000`);
         if (!res.ok) throw new Error(`Server ${res.status}`);
         const payload = await res.json();
         const arr = Array.isArray(payload) ? payload : payload.items || payload || [];

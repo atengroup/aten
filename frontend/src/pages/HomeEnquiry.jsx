@@ -22,21 +22,6 @@ const THEMES = [
   { id: "traditional", label: "Traditional", image: "/images/themes/traditional.jpg", bullets: ["Warm woods", "Classic details"] },
 ];
 
-const KITCHENS = [
-  { id: "open", label: "Open", image: "/images/kitchens/open.jpg", bullets: ["Integrated living", "Social layout"] },
-  { id: "closed", label: "Closed", image: "/images/kitchens/closed.jpg", bullets: ["Odour control", "Defined zones"] },
-  { id: "island", label: "Island", image: "/images/kitchens/island.jpg", bullets: ["Extra prep space", "Casual seating"] },
-  { id: "lshape", label: "L-shaped", image: "/images/kitchens/lshape.jpg", bullets: ["Efficient flow", "Flexible layout"] },
-  { id: "galley", label: "Galley", image: "/images/kitchens/galley.jpg", bullets: ["Compact", "Works well for small homes"] },
-];
-
-const MATERIALS = [
-  { id: "laminate", label: "Laminate", image: "/images/materials/laminate.jpg", bullets: ["Budget friendly", "Wide colours"] },
-  { id: "veneer", label: "Veneer", image: "/images/materials/veneer.jpg", bullets: ["Natural look", "Cost-effective"] },
-  { id: "solidwood", label: "Solid Wood", image: "/images/materials/wood.jpg", bullets: ["Durable", "Ages well"] },
-  { id: "mdf", label: "MDF", image: "/images/materials/mdf.jpg", bullets: ["Smooth finish", "Good for paint"] },
-  { id: "acrylic", label: "Acrylic", image: "/images/materials/acrylic.jpg", bullets: ["High gloss", "Contemporary" ] },
-];
 
 const TYPE_OPTIONS = [
   { value: "1BHK", label: "1 BHK" },
@@ -75,9 +60,7 @@ export default function HomeEnquiry() {
   const [pendingSubmit, setPendingSubmit] = useState(false);
 
   const steps = [
-    { key: "theme", label: "Theme" },
-    { key: "kitchen", label: "Kitchen type" },
-    { key: "material", label: "Material" },
+    { key: "theme", label: "Theme" }
   ];
   const [activeStep, setActiveStep] = useState(0);
 
@@ -117,8 +100,6 @@ export default function HomeEnquiry() {
       city: form.city || null,
       type: finalType,
       bathroom_number: form.bathroom_number || null,
-      kitchen_type: selectedKitchen ? findLabel(KITCHENS, selectedKitchen) : null,
-      material: selectedMaterials.map((m) => findLabel(MATERIALS, m)).join(", ") || null,
       area: form.area || null,
       theme: selectedTheme ? findLabel(THEMES, selectedTheme) : null,
     };
@@ -209,12 +190,6 @@ export default function HomeEnquiry() {
         <div className="option-stage">
           {activeStep === 0 && (
             <OptionGroup title="Theme" options={THEMES} multi={false} selected={selectedTheme} onChange={setSelectedTheme} />
-          )}
-          {activeStep === 1 && (
-            <OptionGroup title="Kitchen type" options={KITCHENS} multi={false} selected={selectedKitchen} onChange={setSelectedKitchen} />
-          )}
-          {activeStep === 2 && (
-            <OptionGroup title="Material" options={MATERIALS} multi={true} selected={selectedMaterials} onChange={setSelectedMaterials} />
           )}
 
           <div className={styles.stepNav}>

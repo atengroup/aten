@@ -12,8 +12,6 @@ router.post("/", async (req, res) => {
       city,
       type,
       bathroom_number,
-      kitchen_type,
-      material,
       area,
       theme,
     } = req.body || {};
@@ -28,8 +26,6 @@ router.post("/", async (req, res) => {
       city: city || null,
       type,
       bathroom_number: bathroom_number || null,
-      kitchen_type: kitchen_type || null,
-      material: material || null,
       area: area || null,
       theme: theme || null,
     };

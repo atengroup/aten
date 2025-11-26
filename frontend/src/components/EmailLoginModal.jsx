@@ -228,14 +228,25 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
         <div className={styles.phoneLoginCard}>
           <h2 className={styles.loginTitle}>{mode === "signup" ? "Create Account" : "Sign in"}</h2>
 
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            <button onClick={() => setMode("signup")} type="button" style={{ fontWeight: mode === "signup" ? 600 : 400 }}>
-              Sign Up
-            </button>
-            <button onClick={() => setMode("signin")} type="button" style={{ fontWeight: mode === "signin" ? 600 : 400 }}>
-              Sign In
-            </button>
-          </div>
+      <div className={styles.authSwitch}>
+  <button
+    onClick={() => setMode("signup")}
+    type="button"
+    className={`${styles.authBtn} ${mode === "signup" ? styles.active : ""}`}
+  >
+    Sign Up
+  </button>
+
+  <button
+    onClick={() => setMode("signin")}
+    type="button"
+    className={`${styles.authBtn} ${mode === "signin" ? styles.active : ""}`}
+  >
+    Sign In
+  </button>
+</div>
+
+
 
           {mode === "signup" && (
             <>

@@ -16,21 +16,21 @@ const homeTypes = [
   {
     name: "INTERIO",
     path: "/interio",
-    background: "/interiohome.jpg",
+    background: "/interiohome.webp",
     description:
       "Beautiful, functional spaces crafted with modern design and comfort in mind.",
   },
   {
     name: "REALTY",
     path: "/projects",
-    background: "/realtorhome.jpg",
+    background: "/realtorhome.webp",
     description:
       "Providing reliable property solutions and expert guidance for every home buyer and seller.",
   },
   {
     name: "ENGINEERING",
     path: "/catalog/3bhk",
-    background: "/engineeringhome.jpg",
+    background: "/engineeringhome.webp",
     description:
       "Delivering strong, sustainable, and efficient construction and structural solutions.",
   },

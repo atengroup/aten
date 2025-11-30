@@ -191,7 +191,7 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
       if (onClose) onClose();
     } catch (e) {
       console.error("signIn failed:", e);
-      toast.error(e?.message || "Sign in failed");
+      toast.error("Sign in failed. Invalid Credentials");
     } finally {
       setLoading(false);
     }

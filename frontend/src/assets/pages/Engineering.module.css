@@ -1,0 +1,200 @@
+.engineeringPage {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 36px 28px;
+  color: var(--dark);
+  font-family: var(--font-sans);
+}
+
+/* HERO WITH BACKGROUND IMAGE */
+.engineeringHero {
+  position: relative;
+  border-radius: var(--panel-radius);
+  border: 1px solid var(--panel-border);
+  margin-bottom: 36px;
+  overflow: hidden;
+  height: 550px;
+  box-shadow: var(--soft-shadow);
+  background-color: var(--dark);
+}
+
+/* background image layer */
+.engineeringHero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("/engineering1.webp"); /* hero background image */
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.02);
+  filter: contrast(1.08) saturate(1.06);
+  opacity: 0.9;
+  z-index: 0;
+}
+
+/* dark gradient + text container */
+.heroInner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  align-items: start;
+  z-index: 1;
+    height: 550px;
+  padding: 48px 46px 42px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.75),
+    rgba(0, 0, 0, 0.4),
+    rgba(0, 0, 0, 0.1)
+  );
+  color: var(--btn-text);
+}
+.btnHero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: white;
+  background: var(--accent);
+  padding: 0px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.engineeringHero h1 {
+  font-size: 2rem;
+  margin-bottom: 6px;
+}
+
+.engineeringHero p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* SECTION BASE */
+.section {
+  margin-bottom: 34px;
+  padding: 26px 28px;
+  background: var(--panel-bg);
+  border-radius: var(--panel-radius);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--soft-shadow);
+}
+
+.sectionHeader {
+  margin-bottom: 22px;
+}
+
+.sectionHeader h2 {
+  margin-bottom: 6px;
+}
+
+.sectionHeader p {
+  color: var(--muted-2);
+}
+
+/* GRIDS */
+.cardsGrid,
+.systemsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+}
+
+/* CARD BASE */
+.typeCard,
+.systemCard {
+  padding: 18px 20px 20px;
+  background: var(--accent);
+  color: var(--btn-text);
+  border-radius: 12px;
+  width: 300px;
+  min-height: 220px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* title + description inside red pills */
+.cardTitle {
+  font-weight: 700;
+  font-size: 0.98rem;
+  margin-bottom: 6px;
+}
+
+.cardDesc {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  opacity: 0.95;
+}
+
+/* PROCESS */
+.processBlock {
+  padding-left: 20px;
+  margin-top: 18px;
+}
+
+.processBlock li {
+  margin-bottom: 10px;
+}
+
+/* CONTACT */
+.contactCard {
+  padding: 30px 34px;
+}
+
+.contactColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.bulletList li {
+  margin-bottom: 8px;
+}
+
+.emailCard {
+  background: var(--glass);
+  padding: 22px;
+  border-radius: 12px;
+}
+
+.email {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 12px 0;
+  color: var(--accent);
+}
+
+.emailHint {
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+/* RESP */
+@media (max-width: 900px) {
+  .contactColumns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .engineeringPage {
+    padding: 18px 16px;
+  }
+
+  .section {
+    padding: 20px 18px;
+  }
+
+  .contactCard {
+    padding: 22px 20px;
+  }
+
+  .heroInner {
+    padding: 28px 22px 26px;
+  }
+}

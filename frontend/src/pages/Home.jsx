@@ -29,7 +29,7 @@ const homeTypes = [
   },
   {
     name: "ENGINEERING",
-    path: "/catalog/3bhk",
+    path: "/engineering",
     background: "/engineeringhome.webp",
     description:
       "Delivering strong, sustainable, and efficient construction and structural solutions.",

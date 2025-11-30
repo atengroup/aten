@@ -14,8 +14,11 @@ const BACKEND_BASE =
 function safeParseJson(v, fallback = []) {
   if (v === undefined || v === null) return fallback;
   if (Array.isArray(v)) return v;
-  try { return JSON.parse(v); }
-  catch { return fallback; }
+  try {
+    return JSON.parse(v);
+  } catch {
+    return fallback;
+  }
 }
 
 function extractYouTubeId(url) {
@@ -25,7 +28,7 @@ function extractYouTubeId(url) {
     /(?:youtube\.com\/.*(?:\?|&)v=)([a-zA-Z0-9_-]{6,})/,
     /(?:youtu\.be\/)([a-zA-Z0-9_-]{6,})/,
     /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{6,})/,
-    /(?:youtube\.com\/v\/)([a-zA-Z0-9_-]{6,})/
+    /(?:youtube\.com\/v\/)([a-zA-Z0-9_-]{6,})/,
   ];
   for (const re of patterns) {
     const m = u.match(re);
@@ -62,7 +65,9 @@ export default function ProjectDetail() {
         const list = await fetch(`${BACKEND_BASE}/api/projects`);
         const json = await list.json();
         const items = json.items || [];
-        const fallback = items.find((p) => String(p.slug) === String(slug));
+        const fallback = items.find(
+          (p) => String(p.slug) === String(slug)
+        );
 
         if (fallback) normalize(fallback);
         else toast.error("Project not found");
@@ -80,26 +85,46 @@ export default function ProjectDetail() {
       const amenities = safeParseJson(p.amenities, []);
       const configurations = safeParseJson(p.configurations, []);
       const rawVideos = safeParseJson(p.videos || p.video || [], []);
+      const otherDocuments = safeParseJson(
+        p.other_documents || [],
+        []
+      );
 
       const videos = rawVideos
         .map((v) => {
           if (typeof v === "string") {
             const id = extractYouTubeId(v);
             return id
-              ? { id, url: `https://youtube.com/watch?v=${id}`, thumbnail: makeYoutubeThumbUrl(id) }
+              ? {
+                  id,
+                  url: `https://youtube.com/watch?v=${id}`,
+                  thumbnail: makeYoutubeThumbUrl(id),
+                }
               : null;
           }
-          if (typeof v === "object") {
+          if (typeof v === "object" && v !== null) {
             const id = v.id || extractYouTubeId(v.url);
             return id
-              ? { id, url: v.url, thumbnail: v.thumbnail || makeYoutubeThumbUrl(id) }
+              ? {
+                  id,
+                  url: v.url,
+                  thumbnail: v.thumbnail || makeYoutubeThumbUrl(id),
+                }
               : null;
           }
           return null;
         })
         .filter(Boolean);
 
-      setProject({ ...p, gallery, highlights, amenities, configurations, videos });
+      setProject({
+        ...p,
+        gallery,
+        highlights,
+        amenities,
+        configurations,
+        videos,
+        other_documents: otherDocuments,
+      });
     }
 
     load();
@@ -115,29 +140,43 @@ export default function ProjectDetail() {
     );
 
   const gallery = project.gallery || [];
+  const otherDocs = project.other_documents || [];
 
   return (
     <div className={styles.projectDetail}>
-      
       {/* ---------------- Hero ---------------- */}
       <div className={styles.hero}>
         <div className={styles.heroMedia}>
-          <img src={getImageUrl(project.thumbnail || "/placeholder.jpg")} alt={project.title} />
+          <img
+            src={getImageUrl(project.thumbnail || "/placeholder.jpg")}
+            alt={project.title}
+          />
         </div>
 
         <div className={styles.heroMeta}>
           <h1 className={styles.projectTitle}>{project.title}</h1>
           <div className={styles.projectLocation}>
-            {project.location_area}{project.city ? `, ${project.city}` : ""}
+            {project.location_area}
+            {project.city ? `, ${project.city}` : ""}
           </div>
-          {project.rera && <div className={styles.projectRera}>RERA: {project.rera}</div>}
+          {project.rera && (
+            <div className={styles.projectRera}>RERA: {project.rera}</div>
+          )}
 
           <div className={styles.ctaRow}>
             {project.contact_phone && (
               <>
-                <a href={`tel:${project.contact_phone}`} className={styles.btnCall}>Call</a>
                 <a
-                  href={`https://wa.me/${project.contact_phone.replace(/\D/g, "")}`}
+                  href={`tel:${project.contact_phone}`}
+                  className={styles.btnCall}
+                >
+                  Call
+                </a>
+                <a
+                  href={`https://wa.me/${project.contact_phone.replace(
+                    /\D/g,
+                    ""
+                  )}`}
                   target="_blank"
                   rel="noreferrer"
                   className={styles.btnWa}
@@ -147,7 +186,12 @@ export default function ProjectDetail() {
               </>
             )}
             {project.brochure_url && (
-              <a href={project.brochure_url} target="_blank" rel="noreferrer" className={styles.btnSecondary}>
+              <a
+                href={project.brochure_url}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.btnSecondary}
+              >
                 Download Brochure
               </a>
             )}
@@ -156,7 +200,11 @@ export default function ProjectDetail() {
 
         <div className={styles.overviewWhy}>
           <h3>Why Choose {project.title}</h3>
-          <div dangerouslySetInnerHTML={{ __html: project.description || "" }} />
+          <div
+            dangerouslySetInnerHTML={{
+              __html: project.description || "",
+            }}
+          />
         </div>
       </div>
 
@@ -167,45 +215,62 @@ export default function ProjectDetail() {
         <div className={styles.overviewGrid}>
           <div className={styles.overviewItem}>
             <div className={styles.overviewLabel}>Property Type</div>
-            <div className={styles.overviewValue}>{project.property_type}</div>
+            <div className={styles.overviewValue}>
+              {project.property_type}
+            </div>
           </div>
 
           <div className={styles.overviewItem}>
             <div className={styles.overviewLabel}>Address</div>
-            <div className={styles.overviewValue}>{project.address?project.address:"----"}</div>
+            <div className={styles.overviewValue}>
+              {project.address ? project.address : "----"}
+            </div>
           </div>
 
           <div className={styles.overviewItem}>
-            <div className={styles.overviewLabel}>Construction Status</div>
-            <div className={styles.overviewValue}>{project.status ? project.status :"----"}</div>
+            <div className={styles.overviewLabel}>
+              Construction Status
+            </div>
+            <div className={styles.overviewValue}>
+              {project.status ? project.status : "----"}
+            </div>
           </div>
 
           <div className={styles.overviewItem}>
             <div className={styles.overviewLabel}>Land Area</div>
-            <div className={styles.overviewValue}>{project.land_area ? project.land_area :"----"}</div>
+            <div className={styles.overviewValue}>
+              {project.land_area ? project.land_area : "----"}
+            </div>
           </div>
 
           <div className={styles.overviewItem}>
             <div className={styles.overviewLabel}>Floors</div>
-            <div className={styles.overviewValue}>{project.floors ? project.floors: "----"}</div>
+            <div className={styles.overviewValue}>
+              {project.floors ? project.floors : "----"}
+            </div>
           </div>
 
           <div className={styles.overviewItem}>
             <div className={styles.overviewLabel}>Units</div>
-            <div className={styles.overviewValue}>{project.units?project.units:"----"}</div>
+            <div className={styles.overviewValue}>
+              {project.units ? project.units : "----"}
+            </div>
           </div>
 
           <div className={styles.overviewItem}>
             <div className={styles.overviewLabel}>Blocks</div>
-            <div className={styles.overviewValue}>{project.blocks?project.blocks:"----"}</div>
+            <div className={styles.overviewValue}>
+              {project.blocks ? project.blocks : "----"}
+            </div>
           </div>
 
           <div className={styles.overviewItem}>
             <div className={styles.overviewLabel}>Handover</div>
-            <div className={styles.overviewValue}>{project.handover?project.handover:"----"}</div>
+            <div className={styles.overviewValue}>
+              {project.handover ? project.handover : "----"}
+            </div>
           </div>
         </div>
-        
 
         {/* ----- Videos ------- */}
         {project.videos?.length > 0 && (
@@ -225,9 +290,7 @@ export default function ProjectDetail() {
                     alt=""
                   />
                   <div className={styles.playIcon}>
-                    <div className={styles.playCircle}>
-                      ▶
-                    </div>
+                    <div className={styles.playCircle}>▶</div>
                   </div>
                 </div>
               ))}
@@ -236,25 +299,85 @@ export default function ProjectDetail() {
         )}
       </div>
 
-      {/* ---------------- Amenities ---------------- */}
-      <section className={`${styles.panelCard} ${styles.amenitiesPanel}`}>
-        <h3>Amenities</h3>
-        <div className={styles.amenitiesGrid}>
-          {(project.amenities || []).map((a, i) => (
-            <div key={i} className={styles.amenityChip}>{a}</div>
-          ))}
-        </div>
-      </section>
+     {/* ---------------- Amenities + Highlights ---------------- */}
+<div className={styles.splitPanels}>
 
-      {/* ---------------- Highlights ---------------- */}
-      <section className={`${styles.panelCard}`}>
-        <h3>Highlights</h3>
-        <ul className={styles.highlightsList}>
-          {(project.highlights || []).map((h, i) => (
-            <li key={i}>{h}</li>
-          ))}
-        </ul>
-      </section>
+  {/* Amenities */}
+  <section className={`${styles.panelCard} ${styles.amenitiesPanel}`}>
+    <h3>Amenities</h3>
+    <div className={styles.amenitiesGrid}>
+      {(project.amenities || []).map((a, i) => (
+        <div key={i} className={styles.amenityChip}>{a}</div>
+      ))}
+    </div>
+  </section>
+
+  {/* Highlights + Other Documents */}
+  <section className={`${styles.panelCard} ${styles.highlightsPanel}`}>
+    <h3>Highlights</h3>
+    <ul className={styles.highlightsList}>
+      {(project.highlights || []).map((h, i) => (
+        <li key={i}>{h}</li>
+      ))}
+    </ul>
+
+    {/* ---------- Other Documents (under Highlights) ---------- */}
+    {project.other_documents?.length > 0 && (
+      <div className={styles.docsSection}>
+        <h3>Other Documents</h3>
+        <div className={styles.docsGrid}>
+
+          {project.other_documents.map((doc, i) => {
+            const name =
+              doc.name ||
+              doc.original_name ||
+              (doc.url ? doc.url.split("/").pop() : "Document");
+
+            const cleanName = name.replace(/\.[^/.]+$/, "");
+
+            const ext =
+              (doc.ext || name.split(".").pop() || "").toLowerCase();
+
+            const badge = ext.toUpperCase();
+
+            const icon =
+              ext === "pdf" ? "📄" :
+              ext === "doc" || ext === "docx" ? "📝" :
+              ext === "xls" || ext === "xlsx" ? "📊" :
+              ext === "ppt" || ext === "pptx" ? "📈" :
+              ext === "zip" || ext === "rar" ? "🗂️" :
+              ext.startsWith("png") || ext.startsWith("jpg") || ext.startsWith("jpeg") || ext.startsWith("webp")
+                ? "🖼️" :
+              "📁";
+
+            return (
+              <a
+                key={i}
+                href={doc.url}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.docCard}
+              >
+                <div className={styles.docIcon}>
+                  <span className={styles.docEmoji}>{icon}</span>
+                  <span className={styles.docBadge}>{badge}</span>
+                </div>
+
+                <div className={styles.docBody}>
+                  <div className={styles.docTitle}>{cleanName}</div>
+
+                </div>
+              </a>
+            );
+          })}
+
+        </div>
+      </div>
+    )}
+
+  </section>
+</div>
+
 
       {/* ---------------- Configurations ---------------- */}
       <section className={`${styles.panelCard}`}>
@@ -272,8 +395,12 @@ export default function ProjectDetail() {
               {(project.configurations || []).map((c, i) => (
                 <tr key={i}>
                   <td>{c.type}</td>
-                  <td>{c.size_min} - {c.size_max}</td>
-                  <td>{c.price_min} - {c.price_max}</td>
+                  <td>
+                    {c.size_min} - {c.size_max}
+                  </td>
+                  <td>
+                    {c.price_min} - {c.price_max}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -283,7 +410,9 @@ export default function ProjectDetail() {
 
       {/* ---------------- Gallery ---------------- */}
       {gallery.length > 0 && (
-        <section className={`${styles.panelCard} ${styles.gallerySection}`}>
+        <section
+          className={`${styles.panelCard} ${styles.gallerySection}`}
+        >
           <h3>Gallery</h3>
           <div className={styles.gallery}>
             {gallery.map((g, i) => (
@@ -298,9 +427,14 @@ export default function ProjectDetail() {
         </section>
       )}
 
+
+
       {/* ---------------- Lightbox ---------------- */}
       {lightboxIndex !== null && (
-        <div className={styles.lightbox} onClick={() => setLightboxIndex(null)}>
+        <div
+          className={styles.lightbox}
+          onClick={() => setLightboxIndex(null)}
+        >
           <button className={styles.lightboxClose}>✕</button>
           <img
             src={getImageUrl(gallery[lightboxIndex])}
@@ -311,7 +445,10 @@ export default function ProjectDetail() {
 
       {/* ---------------- Video Lightbox ---------------- */}
       {videoPreviewId && (
-        <div className={styles.lightbox} onClick={() => setVideoPreviewId(null)}>
+        <div
+          className={styles.lightbox}
+          onClick={() => setVideoPreviewId(null)}
+        >
           <button className={styles.lightboxClose}>✕</button>
 
           <iframe
@@ -323,8 +460,8 @@ export default function ProjectDetail() {
       )}
 
       {/* Back Button */}
-      <div style={{ marginTop: 20 }}>
-        <Link to="/projects">← Back to Projects</Link>
+      <div className={styles.backButton}>
+        <Link className={styles.backButtons} to="/projects">← Back to Projects</Link>
       </div>
     </div>
   );

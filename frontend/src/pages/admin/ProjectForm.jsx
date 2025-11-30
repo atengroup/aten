@@ -6,7 +6,11 @@ import styles from "../../assets/pages/admin/ProjectForm.module.css";
 import { getImageUrl } from "../../lib/api";
 import Dropdown from "../../components/Dropdown";
 import { auth } from "../../firebaseConfig";
-import ProjectDocumentsSection from "./ProjectDocumentsSection";
+
+import ProjectBasicInfoSection from "./ProjectBasicInfoSection";
+import ProjectDetailsSection from "./ProjectDetailsSection";
+import ProjectDeveloperSection from "./ProjectDeveloperSection";
+import ProjectOtherDetailsSection from "./ProjectOtherDetailsSection";
 
 const DEV_FALLBACK_IMAGE = "/mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png";
 
@@ -222,9 +226,7 @@ export default function ProjectForm() {
 
   const [docUploading, setDocUploading] = useState(false);
   const [docPreview, setDocPreview] = useState(null);
-
-  const openDocPreview = (doc) => setDocPreview(doc);
-  const closeDocPreview = () => setDocPreview(null);
+  const [activeSection, setActiveSection] = useState("basic"); // basic | details | developer | other
 
   const [form, setForm] = useState({
     title: "",
@@ -264,6 +266,72 @@ export default function ProjectForm() {
   const [selectedUploads, setSelectedUploads] = useState(new Set());
   const [videoUrlText, setVideoUrlText] = useState("");
   const [videoPreviewModal, setVideoPreviewModal] = useState(null);
+
+  const openDocPreview = (doc) => setDocPreview(doc);
+  const closeDocPreview = () => setDocPreview(null);
+  // ---------- Section-specific instructions ----------
+  const renderInstructions = () => {
+    switch (activeSection) {
+      case "basic":
+        return (
+          <div className={styles.instructions}>
+            <h3>Basic Info – how to fill</h3>
+            <ul>
+              <li><strong>Title</strong>: Marketing name of the project (e.g. “DTC Skyler”).</li>
+              <li><strong>Slug</strong>: URL-friendly id; leave blank to auto-generate.</li>
+              <li><strong>City & Location area</strong>: Used for search filters and listing cards.</li>
+              <li><strong>Address</strong>: Short but clear address / landmark for users.</li>
+              <li><strong>Description</strong>: 3–6 lines that describe the project at a high level.</li>
+              <li><strong>Status & Property Type</strong>: Drives labels like “Under Construction”, “Residential”, etc.</li>
+            </ul>
+          </div>
+        );
+
+      case "details":
+        return (
+          <div className={styles.instructions}>
+            <h3>Details – units, highlights & media</h3>
+            <ul>
+              <li><strong>Configurations</strong>: Each row is a unit type (e.g. 2 BHK) with size and price range.</li>
+              <li><strong>Amenities</strong>: Add one per line (Gym, Pool, Community Hall, etc.).</li>
+              <li><strong>Highlights</strong>: Short bullet points that sell the project (Near Metro, Lake-facing, etc.).</li>
+              <li><strong>Gallery</strong>: Upload images; choose 1 image as the listing thumbnail.</li>
+              <li><strong>Videos</strong>: Paste YouTube URLs / IDs for walkthroughs and promos.</li>
+            </ul>
+          </div>
+        );
+
+      case "developer":
+        return (
+          <div className={styles.instructions}>
+            <h3>Developer Info – brand & profile</h3>
+            <ul>
+              <li><strong>Select existing developer</strong> to reuse name, logo and description from other projects.</li>
+              <li>Use <strong>Other / Manual</strong> to type a new developer.</li>
+              <li><strong>Developer Name</strong>: Brand name that should show on listings.</li>
+              <li><strong>Developer Logo</strong>: PNG logo; either upload or paste an image URL.</li>
+              <li><strong>Developer Description</strong>: 2–4 lines about the builder, track record, or tagline.</li>
+            </ul>
+          </div>
+        );
+
+      case "other":
+      default:
+        return (
+          <div className={styles.instructions}>
+            <h3>Other Details – documents & contact</h3>
+            <ul>
+              <li><strong>Blocks / Units / Floors</strong>: Shown as project stats on the detail page.</li>
+              <li><strong>Land Area</strong>: Total project land area (with unit in the text).</li>
+              <li><strong>Brochure</strong>: Upload a PDF or paste a brochure URL.</li>
+              <li><strong>Other Documents</strong>: Floor plans, payment schedules, T&Cs, etc.</li>
+              <li>You can <strong>rename</strong> each document and <strong>remove</strong> it (deletes from bucket too).</li>
+              <li><strong>Contact phone / email</strong>: Lead contact details that show on the project.</li>
+            </ul>
+          </div>
+        );
+    }
+  };
 
   // ---------- Developers list ----------
   async function fetchDevelopersList() {
@@ -306,8 +374,7 @@ export default function ProjectForm() {
         )
           .toString()
           .trim();
-        if (!map.has(name))
-          map.set(name, { name, logo, description });
+        if (!map.has(name)) map.set(name, { name, logo, description });
       }
       setDevelopersList(
         Array.from(map.values()).map((d) => ({
@@ -432,6 +499,7 @@ export default function ProjectForm() {
   const setField = (field, value) =>
     setForm((s) => ({ ...s, [field]: value }));
 
+  // ---------- Configs ----------
   const setConfigAt = (idx, obj) =>
     setForm((s) => ({
       ...s,
@@ -452,6 +520,7 @@ export default function ProjectForm() {
       configurations: s.configurations.filter((_, i) => i !== idx),
     }));
 
+  // ---------- amenities / highlights ----------
   const addAmenity = () => {
     const txt = amenityText.trim();
     if (!txt) {
@@ -595,7 +664,7 @@ export default function ProjectForm() {
 
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("folder", "brochure"); // ensure goes to brochure/ folder
+    fd.append("folder", "brochure");
 
     const toastId = toast.loading("Uploading brochure...");
     try {
@@ -680,7 +749,7 @@ export default function ProjectForm() {
         id: Date.now(),
         name: baseName,
         url: publicUrl,
-        path: j.path || null, // important for delete/rename
+        path: j.path || null,
         type: file.type || "application/octet-stream",
         ext,
         original_name: originalName,
@@ -751,7 +820,6 @@ export default function ProjectForm() {
       let newPath = doc.path || null;
       let newUrl = doc.url;
 
-      // only rename in bucket if we know storage path
       if (doc.path) {
         const headers = await makeHeaders({ forJson: true });
         const res = await fetch(`${BACKEND_BASE}/api/uploads/rename`, {
@@ -840,6 +908,11 @@ export default function ProjectForm() {
     }
   }
 
+  const openUploadsModal = async () => {
+    setShowUploadsModal(true);
+    await fetchUploadsList();
+  };
+
   const toggleUploadSelect = (canonicalPath) => {
     setSelectedUploads((prev) => {
       const s = new Set(prev);
@@ -922,8 +995,7 @@ export default function ProjectForm() {
   const closeVideoPreview = () => setVideoPreviewModal(null);
 
   // ---------- Submit ----------
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async ({ navigateAfter = false } = {}) => {
     if (!form.title || !form.city) {
       toast.error("Please fill Title and City (required).");
       return;
@@ -957,7 +1029,7 @@ export default function ProjectForm() {
       if (res.ok) {
         await res.json().catch(() => ({}));
         toast.success("Project saved", { id: tid });
-        navigate("/admin/projects");
+        if (navigateAfter) navigate("/admin/projects");
       } else {
         const err = await res.json().catch(() => ({}));
         console.error("Save error", err);
@@ -979,767 +1051,139 @@ export default function ProjectForm() {
   // ---------- Render ----------
   return (
     <div className={styles.projectFormShell}>
-      <form className={styles.projectForm} onSubmit={handleSubmit}>
+      <form
+        className={styles.projectForm}
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmit({ navigateAfter: false });
+        }}
+      >
         <h2 className={styles.title}>
           {id && id !== "new" ? "Edit Project" : "Add Project"}
         </h2>
 
-        <div className={styles.instructions}>
-          <h3>How to fill this form (quick guide)</h3>
-          <ul>
-            <li>
-              <strong>Title</strong>: Name of the project (e.g. "DTC Skyler").
-            </li>
-            <li>
-              <strong>Slug</strong>: URL friendly id (auto generated from Title
-              if left empty).
-            </li>
-            <li>
-              <strong>City / Location area</strong>: City and neighbourhood
-              for search and listing cards.
-            </li>
-            <li>
-              <strong>Address</strong>: Short address or landmark for
-              displays.
-            </li>
-            <li>
-              <strong>RERA</strong>: RERA number (if applicable).
-            </li>
-            <li>
-              <strong>Configurations</strong>: Add unit types with sizes and
-              price ranges.
-            </li>
-            <li>
-              <strong>Amenities</strong>: Add features (Gym, Pool) one at a
-              time.
-            </li>
-            <li>
-              <strong>Highlights</strong>: Short selling bullets.
-            </li>
-            <li>
-              <strong>Gallery</strong>: Upload images (jpg/png). After upload
-              you can choose a thumbnail image for listing cards.
-            </li>
-            <li>
-              <strong>Videos</strong>: Add YouTube links for walkthroughs /
-              promos.
-            </li>
-            <li>
-              <strong>Metadata</strong>: Blocks, Units, Floors (used on detail
-              page).
-            </li>
-            <li>
-              <strong>Thumbnail</strong>: The selected thumbnail is sent in the
-              payload as <code>thumbnail</code>.
-            </li>
-          </ul>
-        </div>
+             {renderInstructions()}
 
-        {/* Basic fields */}
-        <section className={styles.grid2}>
-          <label className={styles.formLabel}>
-            Title *
-            <input
-              className={styles.input}
-              value={form.title}
-              onChange={(e) => setField("title", e.target.value)}
-              placeholder="Project title"
-              required
-            />
-          </label>
-
-          <label className={styles.formLabel}>
-            Slug (optional)
-            <input
-              className={styles.input}
-              value={form.slug}
-              onChange={(e) => setField("slug", e.target.value)}
-              placeholder="auto-generated-from-title"
-            />
-          </label>
-
-          <label className={styles.formLabel}>
-            City *
-            <input
-              className={styles.input}
-              value={form.city}
-              onChange={(e) => setField("city", e.target.value)}
-              placeholder="e.g. Kolkata"
-              required
-            />
-          </label>
-
-          <label className={styles.formLabel}>
-            Location area
-            <input
-              className={styles.input}
-              value={form.location_area}
-              onChange={(e) => setField("location_area", e.target.value)}
-              placeholder="Joka / Salt Lake"
-            />
-          </label>
-
-          <label className={styles.formLabel}>
-            Address
-            <textarea
-              className={styles.textarea}
-              value={form.address}
-              onChange={(e) => setField("address", e.target.value)}
-              placeholder="Full/short address"
-            />
-          </label>
-
-          <label className={styles.formLabel}>
-            Description
-            <textarea
-              className={styles.textarea}
-              value={form.description}
-              onChange={(e) => setField("description", e.target.value)}
-              placeholder="Full/short description"
-            />
-          </label>
-
-          <label className={styles.formLabel}>
-            RERA / Reg. No.
-            <input
-              className={styles.input}
-              value={form.rera}
-              onChange={(e) => setField("rera", e.target.value)}
-              placeholder="WBRERA/..."
-            />
-          </label>
-
-          <label className={styles.formLabel}>
-            Status
-            <select
-              className={styles.select}
-              value={form.status}
-              onChange={(e) => setField("status", e.target.value)}
-            >
-              <option>Active</option>
-              <option>Under Construction</option>
-              <option>Ready To Move</option>
-              <option>Completed</option>
-            </select>
-          </label>
-
-          <label className={styles.formLabel}>
-            Property type
-            <select
-              className={styles.select}
-              value={form.property_type}
-              onChange={(e) => setField("property_type", e.target.value)}
-            >
-              <option>Residential</option>
-              <option>Commercial</option>
-            </select>
-          </label>
-        </section>
-
-        {/* Configurations */}
-        <div className={styles.panels}>
-          <div className={styles.panelHeader}>
-            <div>
-              <h4>Configurations</h4>
-              <small>
-                Define unit types (e.g., 2 BHK / 3 BHK) with sizes and price
-                ranges.
-              </small>
-            </div>
-          </div>
-
-          <div className={styles.configs}>
-            {form.configurations.map((c, idx) => (
-              <div className={styles.configRow} key={idx}>
-                <input
-                  className={styles.cfgInput}
-                  value={c.type}
-                  onChange={(e) =>
-                    setConfigAt(idx, { type: e.target.value })
-                  }
-                />
-                <input
-                  className={styles.cfgInput}
-                  placeholder="size min (sqft)"
-                  value={c.size_min}
-                  onChange={(e) =>
-                    setConfigAt(idx, { size_min: e.target.value })
-                  }
-                />
-                <input
-                  className={styles.cfgInput}
-                  placeholder="size max (sqft)"
-                  value={c.size_max}
-                  onChange={(e) =>
-                    setConfigAt(idx, { size_max: e.target.value })
-                  }
-                />
-                <input
-                  className={styles.cfgInput}
-                  placeholder="price min"
-                  value={c.price_min}
-                  onChange={(e) =>
-                    setConfigAt(idx, { price_min: e.target.value })
-                  }
-                />
-                <input
-                  className={styles.cfgInput}
-                  placeholder="price max"
-                  value={c.price_max}
-                  onChange={(e) =>
-                    setConfigAt(idx, { price_max: e.target.value })
-                  }
-                />
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.btnSmall}`}
-                  onClick={() => removeConfiguration(idx)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-            <div style={{ marginTop: 8 }}>
-              <button
-                type="button"
-                onClick={addConfiguration}
-                className={styles.btn}
-              >
-                + Add configuration
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Amenities & Highlights */}
-        <div className={styles.grid2}>
-          <div className={styles.panels}>
-            <div className={styles.panelHeader}>
-              <h4>Amenities</h4>
-            </div>
-            <div className={styles.chipRow}>
-              <input
-                className={styles.input}
-                value={amenityText}
-                onChange={(e) => setAmenityText(e.target.value)}
-                placeholder="e.g. Gymnasium"
-              />
-              <button
-                type="button"
-                className={styles.btn}
-                onClick={addAmenity}
-              >
-                Add Amenity
-              </button>
-            </div>
-            <div className={styles.chips}>
-              {form.amenities.map((a, i) => (
-                <span className={styles.chip} key={i}>
-                  {a}{" "}
-                  <button
-                    type="button"
-                    onClick={() => removeAmenity(i)}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.panels}>
-            <div className={styles.panelHeader}>
-              <h4>Highlights</h4>
-            </div>
-            <div className={styles.chipRow}>
-              <input
-                className={styles.input}
-                value={highlightText}
-                onChange={(e) => setHighlightText(e.target.value)}
-                placeholder="e.g. Near Metro"
-              />
-              <button
-                type="button"
-                className={styles.btn}
-                onClick={addHighlight}
-              >
-                Add Highlight
-              </button>
-            </div>
-            <div className={styles.chips}>
-              {form.highlights.map((h, i) => (
-                <span className={styles.chip} key={i}>
-                  {h}{" "}
-                  <button
-                    type="button"
-                    onClick={() => removeHighlight(i)}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Gallery */}
-        <div className={styles.panels}>
-          <div className={styles.panelHeader}>
-            <h4>Gallery</h4>
-            <small>Select one image as listing thumbnail.</small>
-          </div>
-
-          <div className={styles.uploaderRow}>
-            <input
-              ref={fileInputRef}
-              className={styles.hiddenFile}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={onFileChange}
-            />
+        {/* Stepper / progress buttons */}
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            margin: "16px 0 12px",
+            flexWrap: "wrap",
+          }}
+        >
+          {[
+            { id: "basic", label: "1. Basic Info" },
+            { id: "details", label: "2. Details" },
+            { id: "developer", label: "3. Developer Info" },
+            { id: "other", label: "4. Other Details" },
+          ].map((s) => (
             <button
+              key={s.id}
               type="button"
+              onClick={() => setActiveSection(s.id)}
               className={styles.btn}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {uploading ? "Uploading..." : "Select & Upload"}
-            </button>
-
-            <button
-              type="button"
-              className={styles.btn}
-              onClick={async () => {
-                setShowUploadsModal(true);
-                await fetchUploadsList();
-              }}
-            >
-              Select from uploads
-            </button>
-          </div>
-
-          <div className={styles.galleryPreview}>
-            {form.gallery.map((g, i) => (
-              <div key={i} className={styles.galleryItem}>
-                <img
-                  src={getImageUrl(g) || DEV_FALLBACK_IMAGE}
-                  alt={`gallery-${i}`}
-                />
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 8,
-                    bottom: 8,
-                    display: "flex",
-                    gap: 8,
-                  }}
-                >
-                  <label
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      background: "rgba(255,255,255,0.9)",
-                      padding: "4px 6px",
-                      borderRadius: 6,
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="thumbnail"
-                      checked={form.thumbnail === g}
-                      onChange={() => setThumbnail(g)}
-                    />
-                    <span style={{ fontSize: 12 }}>Thumbnail</span>
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  className={styles.removeBtn}
-                  onClick={() => removeGalleryItem(i)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-            {form.gallery.length === 0 && (
-              <div className={styles.placeholder}>No images yet.</div>
-            )}
-          </div>
-        </div>
-
-        {/* Videos */}
-        <div className={styles.panels}>
-          <div className={styles.panelHeader}>
-            <h4>Property Videos (YouTube)</h4>
-            <small>
-              Add YouTube links for walkthroughs / promos. Thumbnails will
-              be shown below.
-            </small>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              alignItems: "center",
-              marginBottom: 10,
-            }}
-          >
-            <input
-              className={styles.input}
-              value={videoUrlText}
-              onChange={(e) => setVideoUrlText(e.target.value)}
-              placeholder="Paste YouTube link or ID"
-              style={{ flex: "1 1 auto" }}
-            />
-            <button
-              type="button"
-              className={styles.btn}
-              onClick={addVideo}
-            >
-              Add Video
-            </button>
-          </div>
-
-          <div className={styles.galleryPreview}>
-            {form.videos && form.videos.length > 0 ? (
-              <div
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  flexWrap: "wrap",
-                }}
-              >
-                {form.videos.map((v, i) => (
-                  <div
-                    key={v.id || i}
-                    className={`${styles.galleryItem} ${styles.videoItem}`}
-                  >
-                    <div
-                      style={{
-                        position: "relative",
-                        width: "100%",
-                        height: 110,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <img
-                        className={styles.videoThumb}
-                        src={v.thumbnail}
-                        alt={`video-${i}`}
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`;
-                        }}
-                      />
-                      <button
-                        className={styles.playOverlay}
-                        type="button"
-                        onClick={() => openVideoPreview(v)}
-                        title="Play video"
-                      >
-                        ▶
-                      </button>
-                    </div>
-                    <div className={styles.videoControls}>
-                      <button
-                        type="button"
-                        className={styles.btn}
-                        onClick={() => openVideoPreview(v)}
-                      >
-                        Preview
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.btn}
-                        onClick={() => removeVideo(i)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.placeholder}>No videos added.</div>
-            )}
-          </div>
-        </div>
-
-        {/* Developer Info */}
-        <div className={styles.panels}>
-          <div className={styles.panelHeader}>
-            <h4>Developer Info</h4>
-            <small>Pick from existing to autofill or add manually.</small>
-          </div>
-
-          <div style={{ marginBottom: 12 }}>
-            <label className={styles.formLabel}>
-              Select existing developer
-            </label>
-            <div
               style={{
-                display: "flex",
-                gap: 8,
-                alignItems: "center",
-                flexWrap: "wrap",
+                flex: "1 1 120px",
+                fontWeight: 600,
+                borderRadius: 999,
+                border:
+                  activeSection === s.id
+                    ? "2px solid var(--accent)"
+                    : "1px solid rgba(0,0,0,0.1)",
+                background:
+                  activeSection === s.id ? "var(--accent-soft)" : "#fff",
               }}
             >
-              <Dropdown
-                id="developer-dropdown"
-                value={developerSelected}
-                onChange={(val) => {
-                  setDeveloperSelected(val || "");
-                  if (
-                    !val ||
-                    val === "" ||
-                    val === "__empty__" ||
-                    val === "custom"
-                  ) {
-                    setField("developer_name", "");
-                    setField("developer_logo", "");
-                    setField("developer_description", "");
-                    return;
-                  }
-                  const d = developersList.find(
-                    (x) => x.name === val
-                  );
-                  if (d) {
-                    setField("developer_name", d.name || "");
-                    if (d.logo) setField("developer_logo", d.logo);
-                    if (d.description)
-                      setField("developer_description", d.description);
-                  }
-                }}
-                options={[
-                  ...developersList.map((d) => ({
-                    value: d.name,
-                    label: d.name,
-                  })),
-                  { value: "custom", label: "Other / Manual" },
-                ]}
-                placeholder="— Select developer —"
-                className="developer-dropdown"
-              />
-
-              <button
-                type="button"
-                className={styles.btn}
-                onClick={() => fetchDevelopersList()}
-                title="Refresh list"
-              >
-                Refresh
-              </button>
-              <small style={{ color: "var(--muted-2)" }}>
-                or choose "Other / Manual" to type new developer
-              </small>
-            </div>
-          </div>
-
-          <div className={styles.grid2}>
-            <label className={styles.formLabel}>
-              Developer Name
-              <input
-                className={styles.input}
-                value={form.developer_name}
-                onChange={(e) => {
-                  setField("developer_name", e.target.value);
-                  setDeveloperSelected("custom");
-                }}
-                placeholder="e.g. ABC Developers"
-              />
-            </label>
-
-            <label className={styles.formLabel}>
-              Developer Logo
-              <div className={styles.uploaderRow}>
-                <button
-                  type="button"
-                  className={styles.btn}
-                  onClick={() => devLogoFileRef.current?.click()}
-                >
-                  Upload Logo (PNG)
-                </button>
-
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={form.developer_logo}
-                  onChange={(e) => {
-                    setField("developer_logo", e.target.value);
-                    setDeveloperSelected("custom");
-                  }}
-                  placeholder="or paste image URL (https://...)"
-                  style={{ flex: "1 1 auto", minWidth: "220px" }}
-                />
-
-                <input
-                  ref={devLogoFileRef}
-                  type="file"
-                  accept=".png,image/png"
-                  style={{ display: "none" }}
-                  onChange={async (e) => {
-                    const files = e.target.files;
-                    if (!files || files.length === 0) return;
-                    const [file] = files;
-                    const isPng =
-                      file.type?.toLowerCase() === "image/png" ||
-                      file.name?.toLowerCase().endsWith(".png");
-                    if (!isPng) {
-                      toast.error(
-                        "Only PNG files are allowed for the developer logo."
-                      );
-                      e.target.value = null;
-                      return;
-                    }
-                    const uploaded = await uploadFiles([file], {
-                      silent: true,
-                      addToGallery: false,
-                    });
-                    if (uploaded.length) {
-                      setField("developer_logo", uploaded[0]);
-                      toast.success(
-                        "Developer logo uploaded successfully (PNG)"
-                      );
-                    }
-                    setDeveloperSelected("custom");
-                    e.target.value = null;
-                  }}
-                />
-              </div>
-
-              {form.developer_logo && (
-                <div className={styles.developerLogoPreview}>
-                  <img
-                    src={
-                      getImageUrl(form.developer_logo) ||
-                      DEV_FALLBACK_IMAGE
-                    }
-                    alt="Developer Logo"
-                  />
-                  <button
-                    type="button"
-                    className={styles.developerLogoRemove}
-                    onClick={() => {
-                      setField("developer_logo", "");
-                      setDeveloperSelected("custom");
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-            </label>
-          </div>
-
-          <label
-            className={styles.formLabel}
-            style={{ gridColumn: "1 / -1" }}
-          >
-            Developer Description
-            <textarea
-              className={styles.textarea}
-              value={form.developer_description}
-              onChange={(e) => {
-                setField("developer_description", e.target.value);
-                setDeveloperSelected("custom");
-              }}
-              placeholder="Short developer profile or tagline"
-            />
-          </label>
+              {s.label}
+            </button>
+          ))}
         </div>
 
-        {/* Metadata + Brochure + Other docs + Contact */}
-        <section className={styles.grid2}>
-          <label className={styles.formLabel}>
-            Blocks
-            <input
-              className={styles.input}
-              value={form.blocks}
-              onChange={(e) => setField("blocks", e.target.value)}
-              placeholder="e.g. A, B, C or 2"
-            />
-          </label>
+        {/* Sections */}
+        {activeSection === "basic" && (
+          <ProjectBasicInfoSection form={form} setField={setField} />
+        )}
 
-          <label className={styles.formLabel}>
-            Units
-            <input
-              className={styles.input}
-              value={form.units}
-              onChange={(e) => setField("units", e.target.value)}
-              placeholder="Total units (number)"
-            />
-          </label>
+        {activeSection === "details" && (
+          <ProjectDetailsSection
+            form={form}
+            setField={setField}
+            amenityText={amenityText}
+            setAmenityText={setAmenityText}
+            highlightText={highlightText}
+            setHighlightText={setHighlightText}
+            addAmenity={addAmenity}
+            removeAmenity={removeAmenity}
+            addHighlight={addHighlight}
+            removeHighlight={removeHighlight}
+            configurations={form.configurations}
+            setConfigAt={setConfigAt}
+            addConfiguration={addConfiguration}
+            removeConfiguration={removeConfiguration}
+            fileInputRef={fileInputRef}
+            uploading={uploading}
+            onFileChange={onFileChange}
+            gallery={form.gallery}
+            thumbnail={form.thumbnail}
+            setThumbnail={setThumbnail}
+            removeGalleryItem={removeGalleryItem}
+            openUploadsModal={openUploadsModal}
+            videos={form.videos}
+            videoUrlText={videoUrlText}
+            setVideoUrlText={setVideoUrlText}
+            addVideo={addVideo}
+            removeVideo={removeVideo}
+            openVideoPreview={openVideoPreview}
+          />
+        )}
 
-          <label className={styles.formLabel}>
-            Floors
-            <input
-              className={styles.input}
-              value={form.floors}
-              onChange={(e) => setField("floors", e.target.value)}
-              placeholder="Number of floors"
-            />
-          </label>
+        {activeSection === "developer" && (
+          <ProjectDeveloperSection
+            form={form}
+            setField={setField}
+            developersList={developersList}
+            developerSelected={developerSelected}
+            setDeveloperSelected={setDeveloperSelected}
+            fetchDevelopersList={fetchDevelopersList}
+            devLogoFileRef={devLogoFileRef}
+            uploadFiles={uploadFiles}
+          />
+        )}
 
-          <label className={styles.formLabel}>
-            Land Area
-            <input
-              className={styles.input}
-              value={form.land_area}
-              onChange={(e) => setField("land_area", e.target.value)}
-              placeholder="What is the land_area"
-            />
-          </label>
-
-          {/* Documents subsection (brochure + other docs) */}
-          <ProjectDocumentsSection
+        {activeSection === "other" && (
+          <ProjectOtherDetailsSection
             form={form}
             setField={setField}
             brochureFileRef={brochureFileRef}
-            onUploadBrochure={uploadBrochureFile}
+            uploadBrochureFile={uploadBrochureFile}
             docFileRef={docFileRef}
             docUploading={docUploading}
-            onUploadOtherDocument={uploadOtherDocument}
-            onDeleteOtherDoc={deleteOtherDocument}
-            onConfirmRename={confirmRenameOtherDocument}
-            onOpenPreview={openDocPreview}
+            uploadOtherDocument={uploadOtherDocument}
+            deleteOtherDocument={deleteOtherDocument}
+            confirmRenameOtherDocument={confirmRenameOtherDocument}
+            openDocPreview={openDocPreview}
           />
+        )}
 
-
-          <label className={styles.formLabel}>
-            Contact phone
-            <input
-              className={styles.input}
-              value={form.contact_phone}
-              onChange={(e) =>
-                setField("contact_phone", e.target.value)
-              }
-              placeholder="+91..."
-            />
-          </label>
-
-          <label className={styles.formLabel}>
-            Contact email
-            <input
-              className={styles.input}
-              type="email"
-              value={form.contact_email}
-              onChange={(e) =>
-                setField("contact_email", e.target.value)
-              }
-              placeholder="sales@example.com"
-            />
-          </label>
-        </section>
-
+        {/* Actions */}
         <div className={styles.formActions}>
           <button
-            type="submit"
-            className={`${styles.btn} ${styles.btnPrimary}`}
+            type="button"
+            className={styles.btn}
+            onClick={() => handleSubmit({ navigateAfter: false })}
             disabled={loading}
           >
-            {loading ? "Saving..." : "Save Project"}
+            {loading ? "Saving..." : "Save this section"}
+          </button>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles.btnPrimary}`}
+            onClick={() => handleSubmit({ navigateAfter: true })}
+            disabled={loading}
+          >
+            {loading ? "Saving..." : "Save all & return"}
           </button>
           <button
             type="button"
@@ -1906,9 +1350,7 @@ export default function ProjectForm() {
                     );
                     if (found) {
                       setField("developer_logo", found.src);
-                      toast.success(
-                        "Developer logo set from uploads"
-                      );
+                      toast.success("Developer logo set from uploads");
                     } else {
                       toast.error("Selected developer logo not found");
                     }
@@ -1966,8 +1408,7 @@ export default function ProjectForm() {
                 }}
                 disabled={selectedUploads && selectedUploads.size === 0}
               >
-                Add selected (
-                {selectedUploads ? selectedUploads.size : 0})
+                Add selected ({selectedUploads ? selectedUploads.size : 0})
               </button>
             </div>
           </div>
@@ -1976,10 +1417,7 @@ export default function ProjectForm() {
 
       {/* Other document preview modal */}
       {docPreview && (
-        <div
-          className={styles.modalBackdrop}
-          onClick={closeDocPreview}
-        >
+        <div className={styles.modalBackdrop} onClick={closeDocPreview}>
           <div
             className={styles.modalContent}
             onClick={(e) => e.stopPropagation()}
@@ -1988,7 +1426,7 @@ export default function ProjectForm() {
               width: "min(95%, 1200px)",
               height: "min(95%, 90vh)",
               padding: 12,
-              overflow:"auto"
+              overflow: "auto",
             }}
           >
             <div
@@ -2005,22 +1443,14 @@ export default function ProjectForm() {
                   "Document preview"}
               </h3>
               <div>
-                <button
-                  className={styles.btn}
-                  onClick={closeDocPreview}
-                >
+                <button className={styles.btn} onClick={closeDocPreview}>
                   Close
                 </button>
               </div>
             </div>
 
             {(docPreview.type || "").startsWith("image/") ? (
-              <div
-                style={{
-                  maxHeight: "60vh",
-                  overflow: "auto",
-                }}
-              >
+              <div style={{ maxHeight: "60vh", overflow: "auto" }}>
                 <img
                   src={docPreview.url}
                   alt={docPreview.name || "Document"}

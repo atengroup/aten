@@ -420,13 +420,7 @@ function closeFullscreen() {
                     </button>
 
                     {/* keep whatever existing action you had (e.g. navigate) */}
-                    <button
-                      type="button"
-                      className={`${styles.btn} ${styles.heroGhost} ${styles.small}`}
-                      onClick={() => navigate(`/projects/${p.slug}`)}
-                    >
-                      View Details
-                    </button>
+                   
                   </div>
                 </div>
               </article>
@@ -434,7 +428,7 @@ function closeFullscreen() {
           </div>
         </div>
       </section>
-             {/* ---------- NEW: GALLERY MODAL ---------- */}
+{/* ---------- NEW: GALLERY MODAL ---------- */}
       {galleryOpen && (
         <div className={styles.modalBackdrop} onClick={closeGallery}>
           <div

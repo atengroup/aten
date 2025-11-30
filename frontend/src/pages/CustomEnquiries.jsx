@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import styles from "../assets/pages/HomeEnquiry.module.css";
 import toast from "react-hot-toast";
 import EmailLoginModal from "../components/EmailLoginModal";
+import { useNavigate } from "react-router-dom";
 
 const RAW_BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE || "";
 const BACKEND_BASE = RAW_BACKEND_BASE.replace(/\/+$/, "");
@@ -16,7 +17,7 @@ export default function CustomEnquiry() {
   // email removed — comes from logged-in user
   const [form, setForm] = useState({ type: "", area: "", city: "" });
   const [customMessage, setCustomMessage] = useState("");
-
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -126,6 +127,13 @@ export default function CustomEnquiry() {
       </div>
 
       <div className={styles.rightPanel}>
+        <button
+            type="button"
+            className={styles.backBtn}
+            onClick={() => navigate(-1)}
+          >
+            Back
+          </button>
         <h2>Custom Enquiry</h2>
         <form className={styles.enquiryForm} onSubmit={handleSubmit}>
 

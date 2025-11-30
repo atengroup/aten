@@ -115,34 +115,15 @@ export const INSPIRATIONS = [
 export const PROJECTS = [
   {
     id: "proj-1",
-    title: "Cozy Minimal Apartment",
+    title: "Modern Apartment",
     city: "Kolkata",
-    gallery: ["/commercial.webp", "/projects/proj1-2.webp"],
-    cover_image: "/commercial.webp",
+    gallery: ["/inp/proj-1-1.webp", "/inp/proj-1-2.webp","/inp/proj-1-3.webp","/inp/proj-1-4.webp"],
+    cover_image: "/inp/proj-1-4.webp",
     size: "1250 sqft",
-    theme: "Minimal",
+    theme: "Modern",
     slug: "cozy-minimal-apartment",
   },
-  {
-    id: "proj-2",
-    title: "Contemporary Kitchen",
-    city: "Mumbai",
-    gallery: ["/projects/proj2-1.webp"],
-    cover_image: "/projects/proj2-1.webp",
-    size: "650 sqft",
-    theme: "Contemporary",
-    slug: "contemporary-kitchen",
-  },
-  {
-    id: "proj-3",
-    title: "Modern Bathroom Makeover",
-    city: "Bengaluru",
-    gallery: ["/projects/proj3-1.webp"],
-    cover_image: "/projects/proj3-1.webp",
-    size: "120 sqft",
-    theme: "Modern",
-    slug: "modern-bathroom",
-  },
+ 
 ];
 
 export default {

@@ -1,6 +1,6 @@
 // src/pages/HomeEnquiry.jsx
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import OptionGroup from "../components/OptionGroup";
 import EmailLoginModal from "../components/EmailLoginModal";
 import styles from "../assets/pages/HomeEnquiry.module.css";
@@ -17,9 +17,9 @@ function buildUrl(path) {
 }
 
 const THEMES = [
-  { id: "modern", label: "Modern", image: "/bathroom1.jpg", bullets: ["Clean lines", "Neutral palette"] },
-  { id: "minimal", label: "Minimal", image: "/bathroom1.jpg", bullets: ["Less is more", "Open spaces"] },
-  { id: "traditional", label: "Traditional", image: "/images/themes/traditional.jpg", bullets: ["Warm woods", "Classic details"] },
+  { id: "modern", label: "Modern", image: "/modern-cozy.webp", bullets: ["Clean lines", "Neutral palette"] },
+  { id: "minimal", label: "Minimal", image: "/living-i3.webp", bullets: ["Less is more", "Open spaces"] },
+  { id: "traditional", label: "Traditional", image: "/bedroom-i3.webp", bullets: ["Warm woods", "Classic details"] },
 ];
 
 
@@ -35,7 +35,7 @@ const TYPE_OPTIONS = [
 export default function HomeEnquiry() {
   const params = useParams();
   const preSelectedType = params.type;
-
+  const navigate = useNavigate()
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [selectedKitchen, setSelectedKitchen] = useState(null);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
@@ -200,6 +200,13 @@ export default function HomeEnquiry() {
       </div>
 
       <div className={styles.rightPanel}>
+        <button
+            type="button"
+            className={styles.backBtn}
+            onClick={() => navigate(-1)}
+          >
+            Back
+          </button>
         <h2>Home Enquiry</h2>
         <form className={styles.enquiryForm} onSubmit={handleSubmit}>
           {/* Email removed from UI — will be taken from logged-in user */}

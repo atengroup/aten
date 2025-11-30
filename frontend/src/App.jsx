@@ -23,6 +23,7 @@ import KitchenEnquiry from "./pages/KitchenEnquiry.jsx";
 import WardrobeEnquiry from "./pages/WardrobeEnquiry.jsx";
 import CustomEnquiry from "./pages/CustomEnquiries.jsx";
 import ScrollToTop from "./ScrollToTop.jsx";
+import Engineering from "./pages/Engineering.jsx";
 
 export default function App() {
   return (
@@ -44,7 +45,7 @@ export default function App() {
           <Route path="/wardrobe" element={<WardrobeEnquiry />} />
           <Route path="/custom" element={<CustomEnquiry />} />
           <Route path="/testimonials" element={<SubmitTestimonial />} />
-
+          <Route path="/engineering" element={<Engineering />} />
 
           {/* --- Realty / Projects section --- */}
           <Route path="/projects" element={<ProjectsList />} />

@@ -383,3 +383,145 @@
   align-items: center;
   justify-content: center;
 }
+/* ===============================
+   Other Documents Section
+   =============================== */
+/* ===============================
+   Other Documents (Icon Tile Layout)
+   =============================== */
+
+.docsSection {
+  margin-top: 14px;
+}
+
+.docsSection h3 {
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: var(--dark);
+}
+.backButton{
+    text-align: center;
+}
+.backButtons{
+  text-decoration: none;
+  color: white;
+  padding: 8px;
+  border-radius: var(--btn-radius);
+  background: var(--accent);
+}
+/* grid = square tiles */
+.docsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 14px;
+}
+
+/* tile card */
+.docCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 14px 10px;
+  border-radius: var(--panel-radius);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  text-decoration: none;
+  color: inherit;
+  width: 120px;
+  box-shadow: var(--soft-shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.docCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--card-shadow);
+  border-color: var(--accent);
+}
+
+/* icon container */
+.docIcon {
+  width: 68px;
+  height: 76px;
+  border-radius: 16px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+/* main emoji / icon */
+.docEmoji {
+  font-size: 34px;
+  color: var(--btn-text);
+}
+
+/* file type badge */
+.docBadge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--panel-bg);
+  color: var(--accent);
+}
+
+/* filename text */
+.docTitle {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--dark);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* responsive */
+@media (max-width: 600px) {
+  .docsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ===============================
+   Amenities + Highlights Split Layout
+   =============================== */
+
+.splitPanels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+/* Make both panels align visually */
+.amenitiesPanel,
+.highlightsPanel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make Other docs visually integrated under highlights */
+.docsSection {
+  margin-top: 14px;
+}
+
+.docsSection h3 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+/* MOBILE STACK */
+@media (max-width: 900px) {
+  .splitPanels {
+    grid-template-columns: 1fr;
+  }
+}

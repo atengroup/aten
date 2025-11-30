@@ -81,7 +81,7 @@
   padding: 12px;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
-  background: #ffd0d4;
+  background: #e9e9e9;
 }
 .panelHeader { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
 .panelHeader h4 { margin:0; font-size:1rem; color: var(--dark); }

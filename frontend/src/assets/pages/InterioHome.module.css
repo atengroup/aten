@@ -579,8 +579,8 @@
 /* main grid (2 columns on desktop; approximates your screenshot) */
 .galleryGrid {
   padding: 14px 18px 18px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   /* grid-auto-rows: 400px; */
   gap: 10px;
 }
@@ -592,8 +592,8 @@
 
 /* individual image tiles */
 .galleryItem img {
-  width: 100%;
-  height: 100%;
+  width: 650px;
+  height: auto;
   object-fit: cover;
   border-radius: 12px;
   display: block;

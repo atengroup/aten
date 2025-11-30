@@ -1,4 +1,6 @@
 // src/lib/api.js
+import { getAuth } from "firebase/auth";
+
 // NOTE: Vite exposes env vars on import.meta.env (not process.env)
 const VITE_BACKEND = import.meta.env.VITE_BACKEND_BASE || "";
 
@@ -147,8 +149,34 @@ export function getAuthToken() {
     return null;
   }
 }
+/* -------------------------
+   Firebase token refresh helper
+   ------------------------- */
 
-export async function sendWithAuth(rawPathOrUrl, opts = {}) {
+async function refreshAuthToken() {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) {
+      console.warn("No Firebase user for token refresh");
+      return null;
+    }
+
+    // force refresh from Firebase
+    const newToken = await user.getIdToken(true);
+    try {
+      localStorage.setItem("auth_token", newToken);
+    } catch (e) {
+      console.warn("Failed to store new auth_token", e);
+    }
+    return newToken;
+  } catch (err) {
+    console.error("refreshAuthToken failed", err);
+    return null;
+  }
+}
+
+export async function sendWithAuth(rawPathOrUrl, opts = {}, _internalRetry = false) {
   const url = looksAbsoluteUrl(rawPathOrUrl)
     ? rawPathOrUrl
     : `${BASE}${rawPathOrUrl.startsWith("/") ? "" : "/"}${rawPathOrUrl}`;
@@ -166,6 +194,7 @@ export async function sendWithAuth(rawPathOrUrl, opts = {}) {
 
   const response = await fetch(url, { ...opts, headers, credentials: "include" });
 
+  // Read response body once
   const text = await response.text().catch(() => "");
   let data = null;
   try {
@@ -174,6 +203,43 @@ export async function sendWithAuth(rawPathOrUrl, opts = {}) {
     data = text;
   }
 
+  // If unauthorized and we haven't retried yet -> try refresh + retry
+  if ((response.status === 401 || response.status === 403) && !_internalRetry) {
+    const newToken = await refreshAuthToken();
+    if (newToken) {
+      const retryHeaders = new Headers(opts.headers || {});
+      if (!retryHeaders.has("Content-Type") && !(opts.body instanceof FormData)) {
+        retryHeaders.set("Content-Type", "application/json");
+      }
+      retryHeaders.set("Authorization", `Bearer ${newToken}`);
+
+      const retryResp = await fetch(url, { ...opts, headers: retryHeaders, credentials: "include" });
+      const retryText = await retryResp.text().catch(() => "");
+      let retryData = null;
+      try {
+        retryData = retryText ? JSON.parse(retryText) : null;
+      } catch (e) {
+        retryData = retryText;
+      }
+
+      if (retryResp.status === 401 || retryResp.status === 403) {
+        const err = new Error("Unauthorized");
+        err.status = retryResp.status;
+        err.body = retryData;
+        throw err;
+      }
+
+      return { ok: retryResp.ok, status: retryResp.status, data: retryData };
+    }
+
+    // refresh failed – fall through to error
+    const err = new Error("Unauthorized");
+    err.status = response.status;
+    err.body = data;
+    throw err;
+  }
+
+  // no retry path needed, return or throw as before
   if (response.status === 401 || response.status === 403) {
     const err = new Error("Unauthorized");
     err.status = response.status;

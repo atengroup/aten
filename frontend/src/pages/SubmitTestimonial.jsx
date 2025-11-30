@@ -121,65 +121,72 @@ export default function SubmitTestimonial() {
   }, [preview]);
 
   async function handleUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      toast.error("Image must be under 8MB");
-      return;
-    }
-
-    const localBlob = URL.createObjectURL(file);
-    if (preview && preview.startsWith("blob:")) {
-      try { URL.revokeObjectURL(preview); } catch (e) {}
-    }
-    setPreview(localBlob);
-
-    const fd = new FormData();
-    fd.append("image", file);
-    toast.loading("Uploading image...", { id: "user-up" });
-    setUploading(true);
-
-    try {
-      const res = await fetch(`${BACKEND_BASE}/api/upload-testimonial-image`, {
-        method: "POST",
-        body: fd,
-      });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(j?.error || j?.message || "Upload failed");
-
-      const path = j.path || null;
-      const signedUrl = j.signedUrl || j.signed_url || null;
-      const publicUrl = j.publicUrl || j.public_url || j.url || null;
-
-      if (!path) {
-        throw new Error("Server did not return storage path for uploaded image");
-      }
-
-      const previewUrl = signedUrl || publicUrl || null;
-
-      setForm((f) => ({ ...f, customer_image: path }));
-      if (previewUrl) {
-        setPreview(previewUrl);
-      } else {
-        try {
-          const built = new URL(path, BACKEND_BASE || window.location.origin).toString();
-          setPreview(built);
-        } catch (err) {
-          // keep local blob preview
-        }
-      }
-
-      toast.success("Image uploaded", { id: "user-up" });
-    } catch (err) {
-      console.error("Upload error:", err);
-      toast.error(err.message || "Image upload failed", { id: "user-up" });
-    } finally {
-      if (localBlob && localBlob.startsWith("blob:")) {
-        try { URL.revokeObjectURL(localBlob); } catch (e) {}
-      }
-      setUploading(false);
-    }
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) {
+    toast.error("Image must be under 8MB");
+    return;
   }
+
+  const localBlob = URL.createObjectURL(file);
+  if (preview && preview.startsWith("blob:")) {
+    try { URL.revokeObjectURL(preview); } catch (e) {}
+  }
+  setPreview(localBlob);
+
+  const fd = new FormData();
+  fd.append("image", file);
+  toast.loading("Uploading image...", { id: "user-up" });
+  setUploading(true);
+
+  try {
+    const res = await fetch(`${BACKEND_BASE}/api/upload-testimonial-image`, {
+      method: "POST",
+      body: fd,
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j?.error || j?.message || "Upload failed");
+
+    const path = j.path || null;                       // e.g. "uploads/xyz.jpg" OR full URL
+    const signedUrl = j.signedUrl || j.signed_url || null;
+    const publicUrl = j.publicUrl || j.public_url || j.url || null;
+
+    if (!path && !publicUrl) {
+      throw new Error("Server did not return a usable image reference");
+    }
+
+    // this is what will go into the payload as `customer_image`
+    // NEVER a signed URL
+    const storageRef = publicUrl || path;
+
+    // save only public (or raw) reference in form
+    setForm((f) => ({ ...f, customer_image: storageRef }));
+
+    // preview can use signed url if available, or fall back to public
+    const previewUrl = signedUrl || publicUrl || storageRef;
+
+    if (previewUrl) {
+      setPreview(previewUrl);
+    } else if (path) {
+      try {
+        const built = new URL(path, BACKEND_BASE || window.location.origin).toString();
+        setPreview(built);
+      } catch (err) {
+        // keep local blob preview
+      }
+    }
+
+    toast.success("Image uploaded", { id: "user-up" });
+  } catch (err) {
+    console.error("Upload error:", err);
+    toast.error(err.message || "Image upload failed", { id: "user-up" });
+  } finally {
+    if (localBlob && localBlob.startsWith("blob:")) {
+      try { URL.revokeObjectURL(localBlob); } catch (e) {}
+    }
+    setUploading(false);
+  }
+}
 
   function removeImage() {
     if (preview && preview.startsWith("blob:")) {

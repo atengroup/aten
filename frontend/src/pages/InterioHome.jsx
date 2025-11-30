@@ -46,12 +46,48 @@ export default function InterioHome() {
   const heroRef = useRef(null);
   const testiRef = useRef(null);
   const projRef = useRef(null);
+const [fullscreenImage, setFullscreenImage] = useState(null);
 
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryTitle, setGalleryTitle] = useState("");
+  const [galleryImages, setGalleryImages] = useState([]);
   // testimonials
   const [testimonials, setTestimonials] = useState([]);
   const [tLoading, setTLoading] = useState(false);
   const [tError, setTError] = useState("");
+ 
+  function normalizeImageUrl(url) {
+    if (!url) return "";
+    if (!url.includes("drive.google.com")) return url;
 
+    // support: .../file/d/FILE_ID/..., ?id=FILE_ID, uc?id=FILE_ID
+    const match = url.match(
+      /(?:file\/d\/|open\?id=|uc\?id=|thumbnail\?id=)([a-zA-Z0-9_-]+)/
+    );
+    if (match && match[1]) {
+      const id = match[1];
+      return `https://drive.google.com/uc?export=view&id=${id}`;
+    }
+    return url;
+  }
+   function openGallery(title, images = []) {
+    setGalleryTitle(title);
+    setGalleryImages(images.map(normalizeImageUrl));
+    setGalleryOpen(true);
+  }
+
+  function closeGallery() {
+    setGalleryOpen(false);
+    setGalleryImages([]);
+    setGalleryTitle("");
+  }
+  function openFullscreen(src) {
+  setFullscreenImage(src);
+}
+
+function closeFullscreen() {
+  setFullscreenImage(null);
+}
   // static content
   const HERO_SLIDES = STATIC_HERO;
   const SERVICES = STATIC_SERVICES;
@@ -237,25 +273,57 @@ export default function InterioHome() {
         </div>
       </section>
 
-      {/* INSPIRATION */}
-      <section className={`${styles.inspirationSection} ${styles.panel}`}>
-        <div className={styles.sectionHead}>
-          <h4>Inspiration Ideas</h4>
-          <p className={styles.muted}>Browse designs & real projects for inspiration</p>
-        </div>
+{/* ---------- INSPIRATION SECTION: ONE THUMBNAIL -> MULTI IMAGES ---------- */}
+<section className={`${styles.inspirationSection} ${styles.panel}`}>
+  <div className={styles.sectionHead}>
+    <h4>Inspiration</h4>
+    <p className={styles.muted}>Some looks to kick-start your ideas</p>
+  </div>
 
-        <div className={styles.inspirationTrack} role="list">
-          {INSPIRATIONS.map((img, i) => {
-            const url = getImageUrl(img) || img || DEV_TEST_FALLBACK;
-            return (
-              <div key={i} className={styles.inspoCard}>
-                <img src={url} alt={`inspo-${i}`} loading="lazy" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEV_TEST_FALLBACK; }} />
-                <div className={styles.inspoCaption}>Modern • Cozy • Minimal</div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+  <div className={styles.inspirationTrack}>
+    {INSPIRATIONS.map((item, idx) => {
+      const isObj = typeof item === "object" && item !== null;
+
+      const title = isObj
+        ? item.title || `Inspiration ${idx + 1}`
+        : `Inspiration ${idx + 1}`;
+
+      const images = isObj
+        ? (item.images && item.images.length ? item.images : [item.cover]).filter(Boolean)
+        : [item]; // legacy string case
+
+      const thumbSrc = normalizeImageUrl(
+        isObj
+          ? item.cover || images[0] // prefer explicit cover
+          : item
+      );
+
+      return (
+        <button
+          key={isObj ? item.id || idx : idx}
+          type="button"
+          className={styles.inspoCard}
+          onClick={() => openGallery(title, images)}
+        >
+          <img
+            src={thumbSrc}
+            alt={title}
+            loading="lazy"
+          />
+          <div className={styles.inspoCaption}>
+            {title}
+            {images.length > 1 && (
+              <span className={styles.inspoCount}>
+                • {images.length} photos
+              </span>
+            )}
+          </div>
+        </button>
+      );
+    })}
+  </div>
+</section>
+
 
       {/* TESTIMONIALS */}
       <section className={`${styles.panel} ${styles.testimonialsSection}`}>
@@ -304,48 +372,131 @@ export default function InterioHome() {
       </section>
 
       {/* PROJECTS */}
-      <section className={`${styles.panel} ${styles.projectsSection}`}>
+       <section className={`${styles.projectsSection} ${styles.panel}`}>
         <div className={styles.sectionHeads}>
-          <h4>Previous Projects</h4>
-          <div className={styles.controls}>
-            <button onClick={() => scrollBy(projRef, -1)} className={styles.ctrl}>‹</button>
-            <button onClick={() => scrollBy(projRef, 1)} className={styles.ctrl}>›</button>
+          <div className={styles.sectionHead}>
+            <h4>Previous Projects</h4>
+            <p className={styles.muted}>A few spaces we have already styled</p>
           </div>
         </div>
 
         <div className={styles.trackWrap}>
-          <div className={`${styles.track} ${styles.projectsTrack}`} ref={projRef} role="list">
-            {PROJECTS.map((p) => {
-              const rawImg = (p.gallery && p.gallery[0]) || p.cover_image || DEV_TEST_FALLBACK;
-              const img = getImageUrl(rawImg) || rawImg || DEV_TEST_FALLBACK;
-              return (
-               <article className={styles.projectCard} key={p.id || p._id}>
-  <div
-    className={styles.projectThumb}
-    style={{ backgroundImage: `url(${img})` }}
-    role="img"
-    aria-label={p.title || p.name || "project thumbnail"}
-  />
-  <div className={styles.projectInfo}>
-    <h5>{p.title || p.name || "Untitled Project"}</h5>
-    <div className={styles.meta}>
-      {p.city || p.location || "—"} • {p.size || p.area || "—"}
-    </div>
-    { (p.description || p.summary) && <div className="excerpt">{(p.description || p.summary).slice(0, 160)}</div> }
-    <div className={styles.theme}>{p.theme || p.design_theme || p.style || "—"}</div>
+          <div className={styles.projectsTrack}>
+            {PROJECTS.map((p) => (
+              <article key={p.id} className={styles.projectCard}>
+                <div
+                  className={styles.projectThumb}
+                  style={{
+                    backgroundImage: `url('${normalizeImageUrl(
+                      p.cover_image
+                    )}')`,
+                  }}
+                />
+                <div className={styles.projectInfo}>
+                  <h5>{p.title}</h5>
+                  <div className={styles.meta}>
+                    {p.city} • {p.size}
+                  </div>
+                  {p.theme && (
+                    <span className={styles.theme}>{p.theme}</span>
+                  )}
 
-    <div className={styles.projectActions}>
-      <Link to={`/projects/${p.id || p.slug || ""}`} className={styles.smalls}>View</Link>
-      <button className={styles.btnSmalls} onClick={() => navigate(`/projects/${p.id || p.slug || ""}`)}>Enquire</button>
-    </div>
-  </div>
-</article>
+                  <div className={styles.projectActions}>
+                    {/* NEW: open gallery of all photos for this project */}
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.heroBtn} ${styles.small}`}
+                      onClick={() =>
+                        openGallery(
+                          p.title,
+                          (p.gallery && p.gallery.length
+                            ? p.gallery
+                            : [p.cover_image]
+                          )
+                        )
+                      }
+                    >
+                      View Photos
+                    </button>
 
-              );
-            })}
+                    {/* keep whatever existing action you had (e.g. navigate) */}
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.heroGhost} ${styles.small}`}
+                      onClick={() => navigate(`/projects/${p.slug}`)}
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>
+             {/* ---------- NEW: GALLERY MODAL ---------- */}
+      {galleryOpen && (
+        <div className={styles.modalBackdrop} onClick={closeGallery}>
+          <div
+            className={`${styles.modal} ${styles.galleryModal}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.galleryHeader}>
+              <h3>{galleryTitle}</h3>
+              <button
+                type="button"
+                className={styles.galleryClose}
+                onClick={closeGallery}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              className={`${styles.galleryGrid} ${
+                galleryImages.length === 3 ? styles.galleryGridThree : ""
+              }`}
+            >
+              {galleryImages.map((src, idx) => (
+  <div
+    key={idx}
+    className={styles.galleryItem}
+    onClick={() => openFullscreen(src)}
+    style={{ cursor: "zoom-in" }}
+  >
+    <img
+      src={src}
+      alt={`${galleryTitle} ${idx + 1}`}
+      loading="lazy"
+    />
+  </div>
+))}
+            </div>
+          </div>
+        </div>
+      )}
+ {/* ---------- FULLSCREEN IMAGE VIEWER ---------- */}
+{fullscreenImage && (
+  <div className={styles.fullscreenBackdrop} onClick={closeFullscreen}>
+    <div
+      className={styles.fullscreenWrapper}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <img
+        src={fullscreenImage}
+        alt="fullscreen view"
+        className={styles.fullscreenImg}
+      />
+      <button
+        className={styles.fullscreenClose}
+        onClick={closeFullscreen}
+        type="button"
+      >
+        ×
+      </button>
+    </div>
+  </div>
+)}
 
       {/* ROOM MODAL */}
       {showRoomModal && (

@@ -4,6 +4,7 @@ import OptionGroup from "../components/OptionGroup";
 import EmailLoginModal from "../components/EmailLoginModal";
 import styles from "../assets/pages/HomeEnquiry.module.css";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 const RAW_BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE || "";
 const BACKEND_BASE = RAW_BACKEND_BASE.replace(/\/+$/, ""); // strip trailing slash
@@ -14,9 +15,9 @@ function buildUrl(path) {
 }
 
 const BATHROOM_TYPES = [
-  { id: "modern", label: "Modern", image: "/images/bathrooms/modern.jpg", bullets: ["Contemporary fixtures", "Clean lines"] },
-  { id: "premium", label: "Premium", image: "/images/bathrooms/premium.jpg", bullets: ["Luxury finishes", "High-end fittings"] },
-  { id: "smart", label: "Smart", image: "/images/bathrooms/smart.jpg", bullets: ["IoT enabled", "Automated controls"] }
+  { id: "modern", label: "Modern", image: "/bathroom-i2.webp", bullets: ["Contemporary fixtures", "Clean lines"] },
+  { id: "premium", label: "Premium", image: "/premium-b.webp", bullets: ["Luxury finishes", "High-end fittings"] },
+  { id: "smart", label: "Smart", image: "/smart-b.webp", bullets: ["IoT enabled", "Automated controls"] }
 ];
 
 export default function BathroomEnquiry() {
@@ -25,7 +26,7 @@ export default function BathroomEnquiry() {
   const [form, setForm] = useState({ type: "", area: "", city: "" });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
-
+  const navigate = useNavigate()
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
 
@@ -138,6 +139,13 @@ export default function BathroomEnquiry() {
       </div>
 
       <div className={styles.rightPanel}>
+        <button
+            type="button"
+            className={styles.backBtn}
+            onClick={() => navigate(-1)}
+          >
+            Back
+          </button>
         <h2>Bathroom Enquiry</h2>
         <form className={styles.enquiryForm} onSubmit={handleSubmit}>
           {/* removed Email field from UI */}

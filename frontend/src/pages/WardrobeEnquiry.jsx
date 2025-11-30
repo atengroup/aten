@@ -4,6 +4,7 @@ import OptionGroup from "../components/OptionGroup";
 import styles from "../assets/pages/HomeEnquiry.module.css";
 import EmailLoginModal from "../components/EmailLoginModal";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 const RAW_BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE || "";
 const BACKEND_BASE = RAW_BACKEND_BASE.replace(/\/+$/, ""); // strip trailing slash
@@ -14,20 +15,22 @@ function buildUrl(path) {
 }
 
 const WARDROBE_TYPES = [
-  { id: "slide", label: "Sliding", image: "/images/wardrobe/slide.jpg", bullets: ["Space saving", "Modern look"] },
-  { id: "swing", label: "Swing", image: "/images/wardrobe/swing.jpg", bullets: ["Traditional", "Full access"] }
+  { id: "slide", label: "Sliding", image: "sliding-w.webp", bullets: ["Space saving", "Modern look"] },
+  { id: "swing", label: "Swing", image: "swing-w.webp", bullets: ["Traditional", "Full access"] }
 ];
 
 const MATERIALS = [
-  { id: "engineered_wood", label: "Engineered Wood", image: "/images/materials/ew.jpg", bullets: ["Stable", "Cost-effective"] },
-  { id: "solid_wood", label: "Solid Wood", image: "/images/materials/solid.jpg", bullets: ["Durable", "Premium finish"] },
-  { id: "plywood", label: "Plywood", image: "/images/materials/ply.jpg", bullets: ["Moisture resistant", "Affordable"] }
+  { id: "plywood", label: "Plywood", image: "ply.webp", bullets: ["Moisture resistant", "Affordable"] },
+  { id: "engineered_wood", label: "Engineered Wood", image: "mdf.webp", bullets: ["Stable", "Cost-effective"] },
+  { id: "hdhmr", label: "HDHMR", image: "hdhmr.webp", bullets: ["Durable", "Premium finish"] },
 ];
 
 const FINISHES = [
-  { id: "matte", label: "Matte", image: "/images/finish/matte.jpg", bullets: ["Subtle", "Low-reflective"] },
-  { id: "gloss", label: "Gloss", image: "/images/finish/gloss.jpg", bullets: ["Shiny", "Contemporary"] },
-  { id: "veneer", label: "Veneer", image: "/images/finish/veneer.jpg", bullets: ["Wood look", "Warm"] }
+  { id: "matte", label: "Laminate", image: "lam.webp", bullets: ["Subtle", "Low-reflective"] },
+  { id: "gloss", label: "PVC", image: "pvc.webp", bullets: ["Shiny", "Contemporary"] },
+  { id: "veneer", label: "Acrylic", image: "vineer.webp", bullets: ["Wood look", "Warm"] },
+  { id: "duco", label: "Duco Paint", image: "duco.webp", bullets: ["Wood look", "Warm"] },
+  { id: "pu", label: "PU Polish", image: "duco.webp", bullets: ["Wood look", "Warm"] },
 ];
 
 export default function WardrobeEnquiry() {
@@ -35,7 +38,7 @@ export default function WardrobeEnquiry() {
   const [material, setMaterial] = useState(null);
   const [finish, setFinish] = useState(null);
   const [lengthFt, setLengthFt] = useState(2);
-
+  const navigate = useNavigate()
   // removed email and area from form state — only city remains
   const [form, setForm] = useState({ city: "" });
 
@@ -215,7 +218,7 @@ export default function WardrobeEnquiry() {
               return (
                 <label key={ft} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                   <input type="radio" name="lengthFt" value={ft} checked={lengthFt === ft} onChange={() => setLengthFt(ft)} />
-                  <span style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(184, 162, 84, 0.845)", fontWeight: 600 }}>{ft} ft</span>
+                  <span style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--accent)", fontWeight: 600 }}>{ft} ft</span>
                 </label>
               );
             })}
@@ -224,6 +227,13 @@ export default function WardrobeEnquiry() {
       </div>
 
       <div className={styles.rightPanel}>
+  <button
+    type="button"
+    className={styles.backBtn}
+    onClick={() => navigate(-1)}
+  >
+    Back
+  </button>
         <h2>Wardrobe Enquiry</h2>
         <form className={styles.enquiryForm} onSubmit={handleSubmit}>
           {/* Email & area removed from UI — email will be taken from logged-in user and sent in payload */}
@@ -243,7 +253,9 @@ export default function WardrobeEnquiry() {
           <div style={{ marginTop: 12 }}>
             <button type="submit" className={styles.submitBtn} disabled={loading}>{loading ? "Saving..." : "Submit Enquiry"}</button>
           </div>
+          
         </form>
+       
       </div>
 
       {showLoginModal && (

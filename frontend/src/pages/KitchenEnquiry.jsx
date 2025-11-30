@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import OptionGroup from "../components/OptionGroup";
 import styles from "../assets/pages/HomeEnquiry.module.css";
 import EmailLoginModal from "../components/EmailLoginModal";
+import { useNavigate } from "react-router-dom";
 
 const RAW_BACKEND_BASE = import.meta.env.VITE_BACKEND_BASE || "";
 const BACKEND_BASE = RAW_BACKEND_BASE.replace(/\/+$/, ""); // strip trailing slash
@@ -13,22 +14,20 @@ function buildUrl(path) {
 }
 
 const KITCHEN_TYPES = [
-  { id: "modular", label: "Modular Kitchen", image: "/kitchen1.jpg", bullets: ["Fully customizable", "Optimized storage"] },
-  { id: "semi-modular", label: "Semi Modular Kitchen", image: "/kitchen1.jpg", bullets: [" Customizable", "Optimized storage"] }
+  { id: "modular", label: "Modular Kitchen", image: "/kitchen1.webp", bullets: ["Fully customizable", "Optimized storage"] },
+  { id: "semi-modular", label: "Semi Modular Kitchen", image: "/kitchen-i1.webp", bullets: [" Customizable", "Optimized storage"] }
 ];
 
 const KITCHEN_THEMES = [
-  { id: "open", label: "Open", image: "/images/kitchens/open.jpg", bullets: ["Integrated living", "Social layout"] },
-  { id: "closed", label: "Closed", image: "/images/kitchens/closed.jpg", bullets: ["Odour control", "Defined zones"] },
-  { id: "island", label: "Island", image: "/images/kitchens/island.jpg", bullets: ["Extra prep space", "Casual seating"] },
-  { id: "lshape", label: "L-shaped", image: "/images/kitchens/lshape.jpg", bullets: ["Efficient flow", "Flexible layout"] },
-  { id: "galley", label: "Galley", image: "/images/kitchens/galley.jpg", bullets: ["Compact", "Great for small kitchens"] }
+  { id: "open", label: "Open", image: "/open-k.webp", bullets: ["Integrated living", "Social layout"] },
+  { id: "lshape", label: "L-shaped", image: "/l-shaped-k.webp", bullets: ["Efficient flow", "Flexible layout"] },
+  { id: "galley", label: "Galley", image: "/galley-k.webp", bullets: ["Compact", "Great for small kitchens"] }
 ];
 
 export default function KitchenEnquiry() {
   const [selectedKitchenType, setSelectedKitchenType] = useState(null);
   const [selectedKitchenTheme, setSelectedKitchenTheme] = useState(null);
-
+  const navigate = useNavigate()
   // removed email from form state — email will be taken from logged-in user
   const [form, setForm] = useState({ city: "", area: "" });
 
@@ -165,6 +164,13 @@ export default function KitchenEnquiry() {
       </div>
 
       <div className={styles.rightPanel}>
+        <button
+            type="button"
+            className={styles.backBtn}
+            onClick={() => navigate(-1)}
+          >
+            Back
+          </button>
         <h2>Kitchen Enquiry</h2>
         <form className={styles.enquiryForm} onSubmit={handleSubmit}>
           {/* Email removed from UI — will be taken from logged-in user and sent in payload */}

@@ -87,7 +87,7 @@ export default function AddAdmin() {
     setLoading(true);
     try {
       const headers = await makeHeaders();
-      const res = await fetch(`${BACKEND_BASE}/api/admins`, { headers });
+      const res = await fetch(`${BACKEND_BASE}/api/admin`, { headers });
       if (!res.ok) throw new Error(`Failed to load admins`);
       const data = await res.json();
       setAdmins(data.items || []);
@@ -116,7 +116,7 @@ export default function AddAdmin() {
     try {
       const headers = await makeHeaders({ forJson: true });
       const payload = { phone: normalizePhone(phone), name: name || null };
-      const res = await fetch(`${BACKEND_BASE}/api/admins`, {
+      const res = await fetch(`${BACKEND_BASE}/api/admin`, {
         method: "POST",
         headers,
         body: JSON.stringify(payload),

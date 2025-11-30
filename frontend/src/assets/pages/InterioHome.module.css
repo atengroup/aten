@@ -347,10 +347,12 @@
   .trustGrid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 880px) {
+
   .heroSlide { height: 420px; }
   .servicesGrid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 520px) {
+  .heroInners {align-items: center; justify-content: center;}
   :root { --hero-height: var(--hero-mobile-height, 360px); } /* small override for local layout */
   .heroSlide { height: var(--hero-height); }
   .servicesGrid { grid-template-columns: 1fr; padding: 0 12px; }

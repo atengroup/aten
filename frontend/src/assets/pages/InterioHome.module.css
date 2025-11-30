@@ -244,7 +244,8 @@
 /* INSPIRATION */
 .inspirationTrack {
   display:flex;
-  gap:12px;
+  padding: 10px;
+  gap:25px;
   overflow-x: auto;
   /* padding: 8px 2px; */
   -ms-overflow-style: none;
@@ -254,14 +255,30 @@
 .inspoCard {
   min-width: 280px;
   border-radius: 10px;
+  padding: 0px;
+  border: 0px;
   overflow: hidden;
-  box-shadow: var(--card-shadow, 0 6px 18px rgba(0,0,0,0.06));
+  box-shadow: var(--card-shadow, 0 3px 5px rgba(0, 0, 0, 0.938));
   background: var(--panel-bg, #fff);
   display:flex;
   flex-direction:column;
 }
 .inspoCard img { width:100%; height:180px; object-fit:cover; display:block; }
-.inspoCaption { padding: 10px 12px; font-weight:700; }
+.inspoCaption {
+  padding: 10px 12px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.inspoCount {
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--muted-2, #6b7280);
+}
+
 
 /* TESTIMONIALS & PROJECTS tracks */
 .track { display:flex; gap:12px; overflow-x:auto; padding:8px 2px; -ms-overflow-style: none; scrollbar-width: none; }
@@ -282,8 +299,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
   padding: 18px;
+  /* make sure it is above navbar + dropdowns */
+  z-index: 10000; /* higher than 6000 */
 }
 .modal {
   width: 100%;
@@ -520,4 +538,116 @@
   .projectInfo .theme { font-size: 0.8rem; padding: 3px 7px; }
   .projectActions { flex-wrap: wrap; gap: 6px; }
   .projectActions .btn { flex: 1 1 48%; }
+}
+/* ---------- Gallery modal for inspirations / projects ---------- */
+
+.galleryModal {
+  max-width: 1400px;
+  max-height: 100vh;
+  margin-top: 30px;
+  overflow: auto;
+  width: 100%;
+  padding: 0;
+  z-index: 9000 !important;
+}
+
+.galleryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.galleryHeader h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.galleryClose {
+  background: transparent;
+  border: none;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+/* main grid (2 columns on desktop; approximates your screenshot) */
+.galleryGrid {
+  padding: 14px 18px 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* grid-auto-rows: 400px; */
+  gap: 10px;
+}
+
+/* when exactly 3 images: last one spans full width like the screenshot */
+.galleryGridThree .galleryItem:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+/* individual image tiles */
+.galleryItem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
+}
+
+/* tighten for smaller screens */
+@media (max-width: 880px) {
+  .galleryGrid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: 220px;
+  }
+}
+/* ---------- Fullscreen Image Viewer ---------- */
+
+.fullscreenBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 11000; /* above gallery + navbar */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreenWrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreenImg {
+  max-width: 95vw;
+  max-height: 95vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+
+.fullscreenClose {
+  position: fixed;
+  top: 20px;
+  right: 22px;
+  font-size: 32px;
+  border: none;
+  background: rgba(0,0,0,0.4);
+  color: #fff;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 999px;
+  z-index: 2;
+}
+
+.fullscreenClose:hover {
+  background: rgba(255,255,255,0.12);
 }

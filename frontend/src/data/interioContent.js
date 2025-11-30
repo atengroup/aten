@@ -9,7 +9,7 @@ const DEV_TEST_LOCAL = "/mnt/data/5d93b9ed-e824-4f8b-958b-aee1b9869dda.png";
 export const HERO_SLIDES = [
   {
     id: "hero-1",
-    img: "/bedroom1.webp",
+    img: "/bedroom3.webp",
     title: "Design your dream home",
     subtitle: "End-to-end full-home furnishing with curated interiors",
     ctas: [
@@ -27,7 +27,7 @@ export const HERO_SLIDES = [
   },
   {
     id: "hero-3",
-    img: "/commercial.webp",
+    img: "/commercial1.webp",
     title: "Commercial Interiors",
     subtitle: "Offices | Retail | Hospitality spaces designed to impress",
     ctas: [
@@ -39,7 +39,7 @@ export const HERO_SLIDES = [
 export const SERVICES = [
   { id: "full-home", title: "Full Home Furnishing", subtitle: "Complete interiors for every room", img: "/bedroom1.webp", path: "/home" },
   { id: "kitchen", title: "Kitchen Makeover", subtitle: "Smart kitchens that cook up joy", img: "/kitchen1.webp", path: "/kitchen" },
-  { id: "bathroom", title: "Bathroom Renovation", subtitle: "Luxury & smart wetspaces", img: "/bathroom1.webp", path: "/bathroom" },
+  { id: "bathroom", title: "Bathroom Renovation", subtitle: "Luxury & smart wetspaces", img: "/bathroomservice.webp", path: "/bathroom" },
   { id: "wardrobe", title: "Wardrobe", subtitle: "Elegant storage solutions", img: "/wardrobe.webp", path: "/wardrobe" },
 ];
 
@@ -50,13 +50,66 @@ export const TRUST_PERKS = [
   { id: 4, title: "Transparent Pricing", desc: "No hidden costs", icon: "/price-tag.png" },
 ];
 
-// Inspiration gallery (uses public assets by default). Includes a local test fallback.
+// src/data/interioContent.js
+
 export const INSPIRATIONS = [
-  "/kitchen1.webp",
-  "/kitchen1.webp",
-  "/kitchen1.webp",
-  "/kitchen1.webp", // local container test image (useful in dev/test)
+  {
+    id: "living-room",
+    title: "Living Room Designs",
+    // thumbnail shown in the track
+    cover: "/living-i1.webp",
+    // all images that will show in the modal (can be Supabase or Google Drive links)
+    images: [
+      "/living-i1.webp",
+      "/living-i2.webp",
+      "/living-i3.webp",
+    ],
+  },
+  {
+    id: "kitchen",
+    title: "Kitchen Inspirations",
+    cover: "/kitchen-i1.webp",
+    images: [
+      "/kitchen-i1.webp",
+      "/kitchen-i2.webp",
+
+    ],
+  },
+   {
+    id: "bedroom",
+    title: "Bedroom Inspirations",
+    cover: "/bedroom-i1.webp",
+    images: [
+      "/bedroom-i1.webp",
+      "/bedroom-i2.webp",
+
+    ],
+  },
+   {
+    id: "bathroom",
+    title: "Bathroom Inspirations",
+    cover: "/bathroom-i1.webp",
+    images: [
+      "/bathroom-i1.webp",
+      "/bathroom-i2.webp",
+      "/bathroom-i3.webp",
+
+    ],
+  },  {
+    id: "kids-room",
+    title: "Kids Room Inspirations",
+    cover: "/kr-i1.webp",
+    images: [
+      "/kr-i1.webp",
+      "/kr-i2.webp",
+      "/kr-i3.webp",
+
+    ],
+  },
+  // you can still have simple strings; they will be treated as 1-image groups
+  // "/kitchen1.webp",
 ];
+
 
 // Projects shown on Interio landing — static curated list (same shape as the Projects card expects)
 export const PROJECTS = [

@@ -6,8 +6,9 @@ import styles from "../../assets/pages/admin/ProjectForm.module.css";
 import { getImageUrl } from "../../lib/api";
 import Dropdown from "../../components/Dropdown";
 import { auth } from "../../firebaseConfig";
+import ProjectDocumentsSection from "./ProjectDocumentsSection";
 
-const DEV_FALLBACK_IMAGE = "/mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png"; // your uploaded dev asset
+const DEV_FALLBACK_IMAGE = "/mnt/data/cd4227da-020a-4696-be50-0e519da8ac56.png";
 
 const emptyConfig = () => ({
   type: "3 BHK",
@@ -33,6 +34,7 @@ const BACKEND_BASE =
     ? "http://localhost:5000"
     : "");
 
+// ---------- Auth helpers ----------
 async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
   const start = Date.now();
   const readStored = () => {
@@ -55,12 +57,17 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
       if (auth && auth.currentUser) {
         const idToken = await auth.currentUser.getIdToken(false);
         if (idToken) {
-          try { localStorage.setItem("auth_token", idToken); } catch {}
-          try { sessionStorage.setItem("auth_token", idToken); } catch {}
+          try {
+            localStorage.setItem("auth_token", idToken);
+          } catch {}
+          try {
+            sessionStorage.setItem("auth_token", idToken);
+          } catch {}
           return idToken;
         }
       }
     } catch {}
+
     await new Promise((res) => setTimeout(res, intervalMs));
   }
 
@@ -68,8 +75,12 @@ async function getAuthToken({ timeoutMs = 3000, intervalMs = 150 } = {}) {
     if (auth && auth.currentUser) {
       const idToken = await auth.currentUser.getIdToken(true);
       if (idToken) {
-        try { localStorage.setItem("auth_token", idToken); } catch {}
-        try { sessionStorage.setItem("auth_token", idToken); } catch {}
+        try {
+          localStorage.setItem("auth_token", idToken);
+        } catch {}
+        try {
+          sessionStorage.setItem("auth_token", idToken);
+        } catch {}
         return idToken;
       }
     }
@@ -85,6 +96,7 @@ async function makeHeaders({ forJson = false } = {}) {
   return headers;
 }
 
+// ---------- misc helpers ----------
 function extractYouTubeId(url) {
   if (!url) return null;
   try {
@@ -93,16 +105,17 @@ function extractYouTubeId(url) {
       /(?:youtube\.com\/.*(?:\?|&)v=)([a-zA-Z0-9_-]{6,})/,
       /(?:youtu\.be\/)([a-zA-Z0-9_-]{6,})/,
       /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{6,})/,
-      /(?:youtube\.com\/v\/)([a-zA-Z0-9_-]{6,})/
+      /(?:youtube\.com\/v\/)([a-zA-Z0-9_-]{6,})/,
     ];
     for (const re of patterns) {
       const m = u.match(re);
       if (m && m[1]) return m[1];
     }
     if (/^[a-zA-Z0-9_-]{6,}$/.test(u)) return u;
-  } catch (err) {}
+  } catch {}
   return null;
 }
+
 function makeYoutubeThumbUrl(id) {
   if (!id) return "";
   return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
@@ -113,7 +126,9 @@ function canonicalStoragePath(val) {
   let s = String(val).trim();
   if (!s) return "";
   if (/^\/\/.*/.test(s)) {
-    try { s = window.location.protocol + s; } catch (e) {}
+    try {
+      s = window.location.protocol + s;
+    } catch (e) {}
   }
   try {
     if (/^https?:\/\//i.test(s)) {
@@ -130,18 +145,86 @@ function canonicalStoragePath(val) {
   return s;
 }
 
+// Convert a jpg/jpeg file to webp using a canvas.
+async function convertJpegToWebP(file) {
+  const isJpegType =
+    file.type === "image/jpeg" ||
+    file.type === "image/jpg" ||
+    /\.jpe?g$/i.test(file.name || "");
+
+  if (!isJpegType) return file;
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    const img = new Image();
+
+    reader.onload = (e) => {
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+
+          if (!canvas.toBlob) {
+            resolve(file);
+            return;
+          }
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                resolve(file);
+                return;
+              }
+              const newName = (file.name || "image")
+                .replace(/\.(jpe?g|JPE?G)$/g, "")
+                .concat(".webp");
+              const webpFile = new File([blob], newName, {
+                type: "image/webp",
+              });
+              resolve(webpFile);
+            },
+            "image/webp",
+            0.9
+          );
+        } catch (err) {
+          console.error("WebP conversion failed, using original file", err);
+          resolve(file);
+        }
+      };
+
+      img.onerror = () => resolve(file);
+      img.src = e.target.result;
+    };
+
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function ProjectForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const fileInputRef = useRef(null);
   const developerLogoModeRef = useRef(false);
   const devLogoFileRef = useRef(null);
+  const brochureFileRef = useRef(null);
+  const docFileRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const [developersList, setDevelopersList] = useState([]);
   const [developerSelected, setDeveloperSelected] = useState("");
+
+  const [docUploading, setDocUploading] = useState(false);
+  const [docPreview, setDocPreview] = useState(null);
+
+  const openDocPreview = (doc) => setDocPreview(doc);
+  const closeDocPreview = () => setDocPreview(null);
 
   const [form, setForm] = useState({
     title: "",
@@ -170,6 +253,7 @@ export default function ProjectForm() {
     developer_description: "",
     developer_logo: "",
     videos: [],
+    other_documents: [],
   });
 
   const [amenityText, setAmenityText] = useState("");
@@ -181,37 +265,78 @@ export default function ProjectForm() {
   const [videoUrlText, setVideoUrlText] = useState("");
   const [videoPreviewModal, setVideoPreviewModal] = useState(null);
 
+  // ---------- Developers list ----------
   async function fetchDevelopersList() {
     try {
       const headers = await makeHeaders();
       const res = await fetch(`${BACKEND_BASE}/api/projects`, { headers });
       if (!res.ok) throw new Error(`projects endpoint failed: ${res.status}`);
       const body = await res.json().catch(() => null);
-      const rawItems = Array.isArray(body) ? body : (body && Array.isArray(body.items) ? body.items : []);
+      const rawItems = Array.isArray(body)
+        ? body
+        : body && Array.isArray(body.items)
+        ? body.items
+        : [];
       const map = new Map();
       for (const it of rawItems) {
-        const name = ((it && (it.developer_name || it.developer || (it.developer && it.developer.name))) || "").toString().trim();
+        const name = (
+          (it &&
+            (it.developer_name ||
+              it.developer ||
+              (it.developer && it.developer.name))) ||
+          ""
+        )
+          .toString()
+          .trim();
         if (!name) continue;
-        const logo = ((it && (it.developer_logo || it.logo || (it.developer && it.developer.logo))) || "").toString().trim();
-        const description = ((it && (it.developer_description || (it.developer && it.developer.description))) || "").toString().trim();
-        if (!map.has(name)) map.set(name, { name, logo, description });
+        const logo = (
+          (it &&
+            (it.developer_logo ||
+              it.logo ||
+              (it.developer && it.developer.logo))) ||
+          ""
+        )
+          .toString()
+          .trim();
+        const description = (
+          (it &&
+            (it.developer_description ||
+              (it.developer && it.developer.description))) ||
+          ""
+        )
+          .toString()
+          .trim();
+        if (!map.has(name))
+          map.set(name, { name, logo, description });
       }
-      setDevelopersList(Array.from(map.values()).map(d => ({ name: d.name, logo: d.logo || "", description: d.description || "" })));
+      setDevelopersList(
+        Array.from(map.values()).map((d) => ({
+          name: d.name,
+          logo: d.logo || "",
+          description: d.description || "",
+        }))
+      );
     } catch (err) {
       console.warn("Could not load developers list:", err);
       setDevelopersList([]);
     }
   }
 
-  useEffect(() => { fetchDevelopersList(); }, []);
+  useEffect(() => {
+    fetchDevelopersList();
+  }, []);
 
+  // ---------- Load/edit project ----------
   useEffect(() => {
     if (!id || id === "new") return;
     (async () => {
       setLoading(true);
       try {
         const headers = await makeHeaders();
-        let res = await fetch(`${BACKEND_BASE}/api/projects/${encodeURIComponent(id)}`, { headers });
+        let res = await fetch(
+          `${BACKEND_BASE}/api/projects/${encodeURIComponent(id)}`,
+          { headers }
+        );
         if (res.ok) {
           const data = await res.json().catch(() => null);
           const p = data?.project || data;
@@ -219,8 +344,14 @@ export default function ProjectForm() {
           setLoading(false);
           return;
         }
-        const listRes = await fetch(`${BACKEND_BASE}/api/projects`, { headers });
-        if (!listRes.ok) { toast.error("Failed to load project list"); setLoading(false); return; }
+        const listRes = await fetch(`${BACKEND_BASE}/api/projects`, {
+          headers,
+        });
+        if (!listRes.ok) {
+          toast.error("Failed to load project list");
+          setLoading(false);
+          return;
+        }
         const listJson = await listRes.json();
         const items = listJson.items || [];
         const byId = items.find((it) => String(it.id) === String(id));
@@ -231,7 +362,9 @@ export default function ProjectForm() {
       } catch (err) {
         console.error("Load project error", err);
         toast.error("Failed to load project");
-      } finally { setLoading(false); }
+      } finally {
+        setLoading(false);
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -240,11 +373,28 @@ export default function ProjectForm() {
     const gallery = safeParseJson(p.gallery, []);
     const highlights = safeParseJson(p.highlights, []);
     const amenities = safeParseJson(p.amenities, []);
-    const configs = safeParseJson(p.configurations, p.configurations && p.configurations.length ? p.configurations : [emptyConfig()]);
-    const price_info = p.price_info && typeof p.price_info === "string"
-      ? (() => { try { return JSON.parse(p.price_info); } catch { return p.price_info; } })()
-      : p.price_info || null;
-    const videos = safeParseJson(p.videos || p.video || p.videos_json || [], []);
+    const configs = safeParseJson(
+      p.configurations,
+      p.configurations && p.configurations.length
+        ? p.configurations
+        : [emptyConfig()]
+    );
+    const price_info =
+      p.price_info && typeof p.price_info === "string"
+        ? (() => {
+            try {
+              return JSON.parse(p.price_info);
+            } catch {
+              return p.price_info;
+            }
+          })()
+        : p.price_info || null;
+    const videos = safeParseJson(
+      p.videos || p.video || p.videos_json || [],
+      []
+    );
+    const otherDocs = safeParseJson(p.other_documents || [], []);
+
     setForm((prev) => ({
       ...prev,
       title: p.title || "",
@@ -259,7 +409,9 @@ export default function ProjectForm() {
       highlights: Array.isArray(highlights) ? highlights : [],
       amenities: Array.isArray(amenities) ? amenities : [],
       gallery: Array.isArray(gallery) ? gallery : [],
-      thumbnail: p.thumbnail || (Array.isArray(gallery) && gallery.length ? gallery[0] : ""),
+      thumbnail:
+        p.thumbnail ||
+        (Array.isArray(gallery) && gallery.length ? gallery[0] : ""),
       brochure_url: p.brochure_url || "",
       contact_phone: p.contact_phone || "",
       contact_email: p.contact_email || "",
@@ -273,60 +425,112 @@ export default function ProjectForm() {
       developer_description: p.developer_description || "",
       developer_logo: p.developer_logo || "",
       videos: Array.isArray(videos) ? videos : [],
+      other_documents: Array.isArray(otherDocs) ? otherDocs : [],
     }));
   }
 
-  const setField = (field, value) => setForm((s) => ({ ...s, [field]: value }));
-  const setConfigAt = (idx, obj) =>
-    setForm((s) => ({ ...s, configurations: s.configurations.map((c, i) => (i === idx ? { ...c, ...obj } : c)) }));
+  const setField = (field, value) =>
+    setForm((s) => ({ ...s, [field]: value }));
 
-  const addConfiguration = () => setForm((s) => ({ ...s, configurations: [...s.configurations, emptyConfig()] }));
-  const removeConfiguration = (idx) => setForm((s) => ({ ...s, configurations: s.configurations.filter((_, i) => i !== idx) }));
+  const setConfigAt = (idx, obj) =>
+    setForm((s) => ({
+      ...s,
+      configurations: s.configurations.map((c, i) =>
+        i === idx ? { ...c, ...obj } : c
+      ),
+    }));
+
+  const addConfiguration = () =>
+    setForm((s) => ({
+      ...s,
+      configurations: [...s.configurations, emptyConfig()],
+    }));
+
+  const removeConfiguration = (idx) =>
+    setForm((s) => ({
+      ...s,
+      configurations: s.configurations.filter((_, i) => i !== idx),
+    }));
 
   const addAmenity = () => {
     const txt = amenityText.trim();
-    if (!txt) { toast.error("Amenity is empty"); return; }
-    setForm((s) => ({ ...s, amenities: [...s.amenities, txt] }));
+    if (!txt) {
+      toast.error("Amenity is empty");
+      return;
+    }
+    setForm((s) => ({
+      ...s,
+      amenities: [...s.amenities, txt],
+    }));
     setAmenityText("");
     toast.success("Amenity added");
   };
-  const removeAmenity = (i) => setForm((s) => ({ ...s, amenities: s.amenities.filter((_, idx) => idx !== i) }));
+
+  const removeAmenity = (i) =>
+    setForm((s) => ({
+      ...s,
+      amenities: s.amenities.filter((_, idx) => idx !== i),
+    }));
 
   const addHighlight = () => {
     const txt = highlightText.trim();
-    if (!txt) { toast.error("Highlight is empty"); return; }
-    setForm((s) => ({ ...s, highlights: [...s.highlights, txt] }));
+    if (!txt) {
+      toast.error("Highlight is empty");
+      return;
+    }
+    setForm((s) => ({
+      ...s,
+      highlights: [...s.highlights, txt],
+    }));
     setHighlightText("");
     toast.success("Highlight added");
   };
-  const removeHighlight = (i) => setForm((s) => ({ ...s, highlights: s.highlights.filter((_, idx) => idx !== i) }));
 
+  const removeHighlight = (i) =>
+    setForm((s) => ({
+      ...s,
+      highlights: s.highlights.filter((_, idx) => idx !== i),
+    }));
+
+  // ---------- Image uploads ----------
   async function uploadFiles(files, options = {}) {
     if (!files || files.length === 0) return [];
     setUploading(true);
     const uploadedUrls = [];
-    const toastId = options.silent ? null : toast.loading("Uploading images...");
+    const toastId = options.silent
+      ? null
+      : toast.loading("Uploading images...");
     try {
       for (const file of Array.from(files)) {
+        const fileToUpload = await convertJpegToWebP(file);
+
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", fileToUpload);
+
         const headers = await makeHeaders();
         if (headers["Content-Type"]) delete headers["Content-Type"];
+
         const res = await fetch(`${BACKEND_BASE}/api/uploads`, {
           method: "POST",
           headers,
           body: formData,
         });
+
         if (!res.ok) {
           const txt = await res.text().catch(() => String(res.status));
           console.error("Upload failed", res.status, txt);
-          if (!options.silent) toast.error(`Upload failed: ${res.status}`, { id: toastId });
+          if (!options.silent)
+            toast.error(`Upload failed: ${res.status}`, {
+              id: toastId,
+            });
           continue;
         }
+
         const j = await res.json().catch(() => null);
         if (j && j.url) uploadedUrls.push(j.url);
         else if (j && j.path) uploadedUrls.push(getImageUrl(j.path));
-        else if (j && j.filename) uploadedUrls.push(getImageUrl(`/uploads/${j.filename}`));
+        else if (j && j.filename)
+          uploadedUrls.push(getImageUrl(`/uploads/${j.filename}`));
         else if (typeof j === "string") uploadedUrls.push(j);
       }
 
@@ -337,12 +541,18 @@ export default function ProjectForm() {
           const unique = [];
           for (const item of newGallery) {
             const cp = canonicalStoragePath(item);
-            if (!seen.has(cp)) { seen.add(cp); unique.push(item); }
+            if (!seen.has(cp)) {
+              seen.add(cp);
+              unique.push(item);
+            }
           }
           const thumbnail = s.thumbnail || unique[0] || "";
           return { ...s, gallery: unique, thumbnail };
         });
-        if (!options.silent) toast.success(`Uploaded ${uploadedUrls.length} image(s)`, { id: toastId });
+        if (!options.silent)
+          toast.success(`Uploaded ${uploadedUrls.length} image(s)`, {
+            id: toastId,
+          });
       } else {
         if (toastId) toast.dismiss(toastId);
       }
@@ -367,7 +577,8 @@ export default function ProjectForm() {
   const removeGalleryItem = (i) => {
     setForm((s) => {
       const newGallery = s.gallery.filter((_, idx) => idx !== i);
-      const newThumbnail = s.thumbnail === s.gallery[i] ? newGallery[0] || "" : s.thumbnail;
+      const newThumbnail =
+        s.thumbnail === s.gallery[i] ? newGallery[0] || "" : s.thumbnail;
       return { ...s, gallery: newGallery, thumbnail: newThumbnail };
     });
     toast.success("Image removed");
@@ -378,6 +589,212 @@ export default function ProjectForm() {
     toast.success("Thumbnail selected");
   };
 
+  // ---------- Brochure upload ----------
+  async function uploadBrochureFile(file) {
+    if (!file) return;
+
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("folder", "brochure"); // ensure goes to brochure/ folder
+
+    const toastId = toast.loading("Uploading brochure...");
+    try {
+      const headers = await makeHeaders();
+      if (headers["Content-Type"]) delete headers["Content-Type"];
+
+      const res = await fetch(`${BACKEND_BASE}/api/uploads`, {
+        method: "POST",
+        headers,
+        body: fd,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Server ${res.status}`);
+      }
+
+      const j = await res.json().catch(() => ({}));
+
+      const publicUrl =
+        j.publicUrl ||
+        j.public_url ||
+        j.url ||
+        (j.path ? getImageUrl(j.path) : null);
+
+      if (!publicUrl) {
+        throw new Error("Upload succeeded but no URL returned from server");
+      }
+
+      setField("brochure_url", publicUrl);
+      toast.success("Brochure uploaded", { id: toastId });
+    } catch (err) {
+      console.error("Brochure upload error:", err);
+      toast.error(err.message || "Brochure upload failed", { id: toastId });
+    } finally {
+      if (brochureFileRef.current) brochureFileRef.current.value = null;
+    }
+  }
+
+  // ---------- Other documents upload/delete/rename ----------
+  async function uploadOtherDocument(file) {
+    if (!file) return;
+
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("folder", "other_documents");
+
+    const toastId = toast.loading("Uploading document...");
+    setDocUploading(true);
+    try {
+      const headers = await makeHeaders();
+      if (headers["Content-Type"]) delete headers["Content-Type"];
+
+      const res = await fetch(`${BACKEND_BASE}/api/uploads`, {
+        method: "POST",
+        headers,
+        body: fd,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Server ${res.status}`);
+      }
+
+      const j = await res.json().catch(() => ({}));
+
+      const publicUrl =
+        j.publicUrl ||
+        j.public_url ||
+        j.url ||
+        (j.path ? getImageUrl(j.path) : null);
+
+      if (!publicUrl) {
+        throw new Error("Upload succeeded but no URL returned from server");
+      }
+
+      const originalName = file.name || "document";
+      const baseName = originalName.replace(/\.[^/.]+$/g, "");
+      const ext = (originalName.split(".").pop() || "").toLowerCase();
+
+      const entry = {
+        id: Date.now(),
+        name: baseName,
+        url: publicUrl,
+        path: j.path || null, // important for delete/rename
+        type: file.type || "application/octet-stream",
+        ext,
+        original_name: originalName,
+      };
+
+      setForm((s) => ({
+        ...s,
+        other_documents: [...(s.other_documents || []), entry],
+      }));
+
+      toast.success("Document uploaded", { id: toastId });
+    } catch (err) {
+      console.error("Other document upload error:", err);
+      toast.error(err.message || "Document upload failed", { id: toastId });
+    } finally {
+      setDocUploading(false);
+      if (docFileRef.current) docFileRef.current.value = null;
+    }
+  }
+
+  async function deleteOtherDocument(idx, doc) {
+    if (!doc) return;
+
+    const sure = window.confirm(
+      `Remove "${doc.name || doc.original_name || "this document"}"? This will also delete it from storage.`
+    );
+    if (!sure) return;
+
+    const toastId = toast.loading("Removing document...");
+    try {
+      if (doc.path) {
+        const headers = await makeHeaders({ forJson: true });
+        const res = await fetch(`${BACKEND_BASE}/api/uploads`, {
+          method: "DELETE",
+          headers,
+          body: JSON.stringify({ path: doc.path }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `Server ${res.status}`);
+        }
+      }
+
+      setForm((s) => ({
+        ...s,
+        other_documents: (s.other_documents || []).filter(
+          (_, i) => i !== idx
+        ),
+      }));
+
+      toast.success("Document removed", { id: toastId });
+    } catch (err) {
+      console.error("Delete other_document error:", err);
+      toast.error(err.message || "Failed to remove document", { id: toastId });
+    }
+  }
+
+  async function confirmRenameOtherDocument(doc, newName, index, onSuccess) {
+    const trimmed = (newName || "").trim();
+    if (!trimmed) {
+      toast.error("Name cannot be empty");
+      return;
+    }
+
+    const toastId = toast.loading("Renaming document...");
+    try {
+      let newPath = doc.path || null;
+      let newUrl = doc.url;
+
+      // only rename in bucket if we know storage path
+      if (doc.path) {
+        const headers = await makeHeaders({ forJson: true });
+        const res = await fetch(`${BACKEND_BASE}/api/uploads/rename`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            oldPath: doc.path,
+            newName: trimmed,
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `Server ${res.status}`);
+        }
+
+        const data = await res.json();
+        newPath = data.path || newPath;
+        newUrl = data.url || newUrl;
+      }
+
+      setForm((s) => {
+        const arr = [...(s.other_documents || [])];
+        if (!arr[index]) return s;
+        arr[index] = {
+          ...arr[index],
+          name: trimmed,
+          path: newPath,
+          url: newUrl,
+        };
+        return { ...s, other_documents: arr };
+      });
+
+      if (typeof onSuccess === "function") onSuccess();
+
+      toast.success("Document renamed", { id: toastId });
+    } catch (err) {
+      console.error("Rename other_document error:", err);
+      toast.error(err.message || "Failed to rename document", { id: toastId });
+    }
+  }
+
+  // ---------- Uploads gallery modal ----------
   async function fetchUploadsList() {
     setUploadsLoading(true);
     setUploadsList([]);
@@ -385,7 +802,8 @@ export default function ProjectForm() {
     try {
       const headers = await makeHeaders();
       const res = await fetch(`${BACKEND_BASE}/api/uploads`, { headers });
-      if (!res.ok) throw new Error(`Uploads listing failed: ${res.status}`);
+      if (!res.ok)
+        throw new Error(`Uploads listing failed: ${res.status}`);
       const body = await res.json().catch(() => null);
       let arr = [];
       if (Array.isArray(body)) {
@@ -393,10 +811,17 @@ export default function ProjectForm() {
           .map((item) => {
             if (!item) return null;
             const signed = item.signedUrl || item.signed_url || null;
-            const publicUrl = item.publicUrl || item.public_url || item.url || null;
-            const srcCandidate = signed || publicUrl || (item.path ? getImageUrl(item.path) : null) || (typeof item === "string" ? getImageUrl(item) : null);
+            const publicUrl =
+              item.publicUrl || item.public_url || item.url || null;
+            const srcCandidate =
+              signed ||
+              publicUrl ||
+              (item.path ? getImageUrl(item.path) : null) ||
+              (typeof item === "string" ? getImageUrl(item) : null);
             const storageKey = item.path || item.name || null;
-            const canonical = storageKey ? canonicalStoragePath(storageKey) : canonicalStoragePath(srcCandidate);
+            const canonical = storageKey
+              ? canonicalStoragePath(storageKey)
+              : canonicalStoragePath(srcCandidate);
             if (!srcCandidate || !canonical) return null;
             return { src: srcCandidate, path: canonical, raw: item };
           })
@@ -404,11 +829,12 @@ export default function ProjectForm() {
       } else {
         throw new Error("Unexpected uploads response shape");
       }
-      console.debug("uploadsList resolved to:", arr);
       setUploadsList(arr);
     } catch (err) {
       console.error("Failed to fetch uploads list:", err);
-      toast.error("Failed to load uploads list. Check backend endpoint /api/uploads");
+      toast.error(
+        "Failed to load uploads list. Check backend endpoint /api/uploads"
+      );
     } finally {
       setUploadsLoading(false);
     }
@@ -425,17 +851,26 @@ export default function ProjectForm() {
 
   const addSelectedUploadsToGallery = () => {
     const picked = Array.from(selectedUploads);
-    if (picked.length === 0) { toast.error("No images selected"); return; }
+    if (picked.length === 0) {
+      toast.error("No images selected");
+      return;
+    }
     setForm((s) => {
-      const newGallery = [...s.gallery, ...picked.map((p) => {
-        const found = uploadsList.find(x => x.path === p);
-        return found ? found.src : p;
-      })];
+      const newGallery = [
+        ...s.gallery,
+        ...picked.map((p) => {
+          const found = uploadsList.find((x) => x.path === p);
+          return found ? found.src : p;
+        }),
+      ];
       const seen = new Set();
       const unique = [];
       for (const item of newGallery) {
         const cp = canonicalStoragePath(item);
-        if (!seen.has(cp)) { seen.add(cp); unique.push(item); }
+        if (!seen.has(cp)) {
+          seen.add(cp);
+          unique.push(item);
+        }
       }
       const thumbnail = s.thumbnail || unique[0] || "";
       return { ...s, gallery: unique, thumbnail };
@@ -444,16 +879,30 @@ export default function ProjectForm() {
     setShowUploadsModal(false);
   };
 
+  // ---------- Videos ----------
   const addVideo = () => {
     const raw = (videoUrlText || "").trim();
-    if (!raw) { toast.error("Paste YouTube link first"); return; }
+    if (!raw) {
+      toast.error("Paste YouTube link first");
+      return;
+    }
     const vid = extractYouTubeId(raw);
-    if (!vid) { toast.error("Not a valid YouTube URL / id"); return; }
+    if (!vid) {
+      toast.error("Not a valid YouTube URL / id");
+      return;
+    }
     setForm((s) => {
       const exists = (s.videos || []).some((v) => v.id === vid);
-      if (exists) { toast.error("Video already added"); return s; }
+      if (exists) {
+        toast.error("Video already added");
+        return s;
+      }
       const thumbnail = makeYoutubeThumbUrl(vid);
-      const obj = { id: vid, url: `https://www.youtube.com/watch?v=${vid}`, thumbnail };
+      const obj = {
+        id: vid,
+        url: `https://www.youtube.com/watch?v=${vid}`,
+        thumbnail,
+      };
       const newVideos = [...(s.videos || []), obj];
       toast.success("Video added");
       return { ...s, videos: newVideos };
@@ -472,9 +921,13 @@ export default function ProjectForm() {
   const openVideoPreview = (video) => setVideoPreviewModal(video);
   const closeVideoPreview = () => setVideoPreviewModal(null);
 
+  // ---------- Submit ----------
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title || !form.city) { toast.error("Please fill Title and City (required)."); return; }
+    if (!form.title || !form.city) {
+      toast.error("Please fill Title and City (required).");
+      return;
+    }
     setLoading(true);
     const tid = toast.loading("Saving project...");
     try {
@@ -485,12 +938,22 @@ export default function ProjectForm() {
         amenities: JSON.stringify(form.amenities || []),
         configurations: JSON.stringify(form.configurations || []),
         videos: JSON.stringify(form.videos || []),
-        price_info: form.price_info ? JSON.stringify(form.price_info) : null,
+        other_documents: JSON.stringify(form.other_documents || []),
+        price_info: form.price_info
+          ? JSON.stringify(form.price_info)
+          : null,
       };
       const method = id && id !== "new" ? "PUT" : "POST";
-      const url = id && id !== "new" ? `${BACKEND_BASE}/api/projects/${id}` : `${BACKEND_BASE}/api/projects`;
+      const url =
+        id && id !== "new"
+          ? `${BACKEND_BASE}/api/projects/${id}`
+          : `${BACKEND_BASE}/api/projects`;
       const headers = await makeHeaders({ forJson: true });
-      const res = await fetch(url, { method, headers, body: JSON.stringify(payload) });
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: JSON.stringify(payload),
+      });
       if (res.ok) {
         await res.json().catch(() => ({}));
         toast.success("Project saved", { id: tid });
@@ -504,72 +967,155 @@ export default function ProjectForm() {
     } catch (err) {
       console.error("Save error", err);
       toast.error("Save failed: exception", { id: tid });
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const galleryCanonicalSet = new Set((form.gallery || []).map(canonicalStoragePath));
+  const galleryCanonicalSet = new Set(
+    (form.gallery || []).map(canonicalStoragePath)
+  );
 
+  // ---------- Render ----------
   return (
     <div className={styles.projectFormShell}>
       <form className={styles.projectForm} onSubmit={handleSubmit}>
-        <h2 className={styles.title}>{id && id !== "new" ? "Edit Project" : "Add Project"}</h2>
+        <h2 className={styles.title}>
+          {id && id !== "new" ? "Edit Project" : "Add Project"}
+        </h2>
 
         <div className={styles.instructions}>
           <h3>How to fill this form (quick guide)</h3>
           <ul>
-            <li><strong>Title</strong>: Name of the project (e.g. "DTC Skyler").</li>
-            <li><strong>Slug</strong>: URL friendly id (auto generated from Title if left empty).</li>
-            <li><strong>City / Location area</strong>: City and neighbourhood for search and listing cards.</li>
-            <li><strong>Address</strong>: Short address or landmark for displays.</li>
-            <li><strong>RERA</strong>: RERA number (if applicable).</li>
-            <li><strong>Configurations</strong>: Add unit types with sizes and price ranges.</li>
-            <li><strong>Amenities</strong>: Add features (Gym, Pool) one at a time.</li>
-            <li><strong>Highlights</strong>: Short selling bullets.</li>
-            <li><strong>Gallery</strong>: Upload images (jpg/png). After upload you can choose a thumbnail image for listing cards.</li>
-            <li><strong>Videos</strong>: Add YouTube links for walkthroughs/promos — thumbnails will display and you can preview inline.</li>
-            <li><strong>Metadata</strong>: Blocks, Units, Floors (used on detail page).</li>
-            <li><strong>Thumbnail</strong>: The selected thumbnail is sent in the payload as <code>thumbnail</code>.</li>
+            <li>
+              <strong>Title</strong>: Name of the project (e.g. "DTC Skyler").
+            </li>
+            <li>
+              <strong>Slug</strong>: URL friendly id (auto generated from Title
+              if left empty).
+            </li>
+            <li>
+              <strong>City / Location area</strong>: City and neighbourhood
+              for search and listing cards.
+            </li>
+            <li>
+              <strong>Address</strong>: Short address or landmark for
+              displays.
+            </li>
+            <li>
+              <strong>RERA</strong>: RERA number (if applicable).
+            </li>
+            <li>
+              <strong>Configurations</strong>: Add unit types with sizes and
+              price ranges.
+            </li>
+            <li>
+              <strong>Amenities</strong>: Add features (Gym, Pool) one at a
+              time.
+            </li>
+            <li>
+              <strong>Highlights</strong>: Short selling bullets.
+            </li>
+            <li>
+              <strong>Gallery</strong>: Upload images (jpg/png). After upload
+              you can choose a thumbnail image for listing cards.
+            </li>
+            <li>
+              <strong>Videos</strong>: Add YouTube links for walkthroughs /
+              promos.
+            </li>
+            <li>
+              <strong>Metadata</strong>: Blocks, Units, Floors (used on detail
+              page).
+            </li>
+            <li>
+              <strong>Thumbnail</strong>: The selected thumbnail is sent in the
+              payload as <code>thumbnail</code>.
+            </li>
           </ul>
         </div>
 
+        {/* Basic fields */}
         <section className={styles.grid2}>
           <label className={styles.formLabel}>
             Title *
-            <input className={styles.input} value={form.title} onChange={(e) => setField("title", e.target.value)} placeholder="Project title" required />
+            <input
+              className={styles.input}
+              value={form.title}
+              onChange={(e) => setField("title", e.target.value)}
+              placeholder="Project title"
+              required
+            />
           </label>
 
           <label className={styles.formLabel}>
             Slug (optional)
-            <input className={styles.input} value={form.slug} onChange={(e) => setField("slug", e.target.value)} placeholder="auto-generated-from-title" />
+            <input
+              className={styles.input}
+              value={form.slug}
+              onChange={(e) => setField("slug", e.target.value)}
+              placeholder="auto-generated-from-title"
+            />
           </label>
 
           <label className={styles.formLabel}>
             City *
-            <input className={styles.input} value={form.city} onChange={(e) => setField("city", e.target.value)} placeholder="e.g. Kolkata" required />
+            <input
+              className={styles.input}
+              value={form.city}
+              onChange={(e) => setField("city", e.target.value)}
+              placeholder="e.g. Kolkata"
+              required
+            />
           </label>
 
           <label className={styles.formLabel}>
             Location area
-            <input className={styles.input} value={form.location_area} onChange={(e) => setField("location_area", e.target.value)} placeholder="Joka / Salt Lake" />
+            <input
+              className={styles.input}
+              value={form.location_area}
+              onChange={(e) => setField("location_area", e.target.value)}
+              placeholder="Joka / Salt Lake"
+            />
           </label>
 
-          <label className={`${styles.formLabel}`}>
+          <label className={styles.formLabel}>
             Address
-            <textarea className={styles.textarea} value={form.address} onChange={(e) => setField("address", e.target.value)} placeholder="Full/short address" />
+            <textarea
+              className={styles.textarea}
+              value={form.address}
+              onChange={(e) => setField("address", e.target.value)}
+              placeholder="Full/short address"
+            />
           </label>
-          <label className={`${styles.formLabel}`}>
+
+          <label className={styles.formLabel}>
             Description
-            <textarea className={styles.textarea} value={form.description} onChange={(e) => setField("description", e.target.value)} placeholder="Full/short description" />
+            <textarea
+              className={styles.textarea}
+              value={form.description}
+              onChange={(e) => setField("description", e.target.value)}
+              placeholder="Full/short description"
+            />
           </label>
 
           <label className={styles.formLabel}>
             RERA / Reg. No.
-            <input className={styles.input} value={form.rera} onChange={(e) => setField("rera", e.target.value)} placeholder="WBRERA/..." />
+            <input
+              className={styles.input}
+              value={form.rera}
+              onChange={(e) => setField("rera", e.target.value)}
+              placeholder="WBRERA/..."
+            />
           </label>
 
           <label className={styles.formLabel}>
             Status
-            <select className={styles.select} value={form.status} onChange={(e) => setField("status", e.target.value)}>
+            <select
+              className={styles.select}
+              value={form.status}
+              onChange={(e) => setField("status", e.target.value)}
+            >
               <option>Active</option>
               <option>Under Construction</option>
               <option>Ready To Move</option>
@@ -579,7 +1125,11 @@ export default function ProjectForm() {
 
           <label className={styles.formLabel}>
             Property type
-            <select className={styles.select} value={form.property_type} onChange={(e) => setField("property_type", e.target.value)}>
+            <select
+              className={styles.select}
+              value={form.property_type}
+              onChange={(e) => setField("property_type", e.target.value)}
+            >
               <option>Residential</option>
               <option>Commercial</option>
             </select>
@@ -591,73 +1141,230 @@ export default function ProjectForm() {
           <div className={styles.panelHeader}>
             <div>
               <h4>Configurations</h4>
-              <small>Define unit types (e.g., 2 BHK / 3 BHK) with sizes and price ranges.</small>
+              <small>
+                Define unit types (e.g., 2 BHK / 3 BHK) with sizes and price
+                ranges.
+              </small>
             </div>
           </div>
 
           <div className={styles.configs}>
             {form.configurations.map((c, idx) => (
               <div className={styles.configRow} key={idx}>
-                <input className={styles.cfgInput} value={c.type} onChange={(e) => setConfigAt(idx, { type: e.target.value })} />
-                <input className={styles.cfgInput} placeholder="size min (sqft)" value={c.size_min} onChange={(e) => setConfigAt(idx, { size_min: e.target.value })} />
-                <input className={styles.cfgInput} placeholder="size max (sqft)" value={c.size_max} onChange={(e) => setConfigAt(idx, { size_max: e.target.value })} />
-                <input className={styles.cfgInput} placeholder="price min" value={c.price_min} onChange={(e) => setConfigAt(idx, { price_min: e.target.value })} />
-                <input className={styles.cfgInput} placeholder="price max" value={c.price_max} onChange={(e) => setConfigAt(idx, { price_max: e.target.value })} />
-                <button type="button" className={`${styles.btn} ${styles.btnSmall}`} onClick={() => removeConfiguration(idx)}>Remove</button>
+                <input
+                  className={styles.cfgInput}
+                  value={c.type}
+                  onChange={(e) =>
+                    setConfigAt(idx, { type: e.target.value })
+                  }
+                />
+                <input
+                  className={styles.cfgInput}
+                  placeholder="size min (sqft)"
+                  value={c.size_min}
+                  onChange={(e) =>
+                    setConfigAt(idx, { size_min: e.target.value })
+                  }
+                />
+                <input
+                  className={styles.cfgInput}
+                  placeholder="size max (sqft)"
+                  value={c.size_max}
+                  onChange={(e) =>
+                    setConfigAt(idx, { size_max: e.target.value })
+                  }
+                />
+                <input
+                  className={styles.cfgInput}
+                  placeholder="price min"
+                  value={c.price_min}
+                  onChange={(e) =>
+                    setConfigAt(idx, { price_min: e.target.value })
+                  }
+                />
+                <input
+                  className={styles.cfgInput}
+                  placeholder="price max"
+                  value={c.price_max}
+                  onChange={(e) =>
+                    setConfigAt(idx, { price_max: e.target.value })
+                  }
+                />
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnSmall}`}
+                  onClick={() => removeConfiguration(idx)}
+                >
+                  Remove
+                </button>
               </div>
             ))}
             <div style={{ marginTop: 8 }}>
-              <button type="button" onClick={addConfiguration} className={styles.btn}>+ Add configuration</button>
+              <button
+                type="button"
+                onClick={addConfiguration}
+                className={styles.btn}
+              >
+                + Add configuration
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Amenities & highlights */}
+        {/* Amenities & Highlights */}
         <div className={styles.grid2}>
           <div className={styles.panels}>
-            <div className={styles.panelHeader}><h4>Amenities</h4></div>
-            <div className={styles.chipRow}>
-              <input className={styles.input} value={amenityText} onChange={(e) => setAmenityText(e.target.value)} placeholder="e.g. Gymnasium" />
-              <button type="button" className={styles.btn} onClick={addAmenity}>Add Amenity</button>
+            <div className={styles.panelHeader}>
+              <h4>Amenities</h4>
             </div>
-            <div className={styles.chips}>{form.amenities.map((a, i) => (<span className={styles.chip} key={i}>{a} <button type="button" onClick={() => removeAmenity(i)}>×</button></span>))}</div>
+            <div className={styles.chipRow}>
+              <input
+                className={styles.input}
+                value={amenityText}
+                onChange={(e) => setAmenityText(e.target.value)}
+                placeholder="e.g. Gymnasium"
+              />
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={addAmenity}
+              >
+                Add Amenity
+              </button>
+            </div>
+            <div className={styles.chips}>
+              {form.amenities.map((a, i) => (
+                <span className={styles.chip} key={i}>
+                  {a}{" "}
+                  <button
+                    type="button"
+                    onClick={() => removeAmenity(i)}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
 
           <div className={styles.panels}>
-            <div className={styles.panelHeader}><h4>Highlights</h4></div>
-            <div className={styles.chipRow}>
-              <input className={styles.input} value={highlightText} onChange={(e) => setHighlightText(e.target.value)} placeholder="e.g. Near Metro" />
-              <button type="button" className={styles.btn} onClick={addHighlight}>Add Highlight</button>
+            <div className={styles.panelHeader}>
+              <h4>Highlights</h4>
             </div>
-            <div className={styles.chips}>{form.highlights.map((h, i) => (<span className={styles.chip} key={i}>{h} <button type="button" onClick={() => removeHighlight(i)}>×</button></span>))}</div>
+            <div className={styles.chipRow}>
+              <input
+                className={styles.input}
+                value={highlightText}
+                onChange={(e) => setHighlightText(e.target.value)}
+                placeholder="e.g. Near Metro"
+              />
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={addHighlight}
+              >
+                Add Highlight
+              </button>
+            </div>
+            <div className={styles.chips}>
+              {form.highlights.map((h, i) => (
+                <span className={styles.chip} key={i}>
+                  {h}{" "}
+                  <button
+                    type="button"
+                    onClick={() => removeHighlight(i)}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Gallery + Thumbnail picker */}
+        {/* Gallery */}
         <div className={styles.panels}>
-          <div className={styles.panelHeader}><h4>Gallery</h4><small>Select one image as listing thumbnail.</small></div>
+          <div className={styles.panelHeader}>
+            <h4>Gallery</h4>
+            <small>Select one image as listing thumbnail.</small>
+          </div>
 
           <div className={styles.uploaderRow}>
-            <input ref={fileInputRef} className={styles.hiddenFile} type="file" accept="image/*" multiple onChange={onFileChange} />
-            <button type="button" className={styles.btn} onClick={() => fileInputRef.current?.click()}>{uploading ? "Uploading..." : "Select & Upload"}</button>
+            <input
+              ref={fileInputRef}
+              className={styles.hiddenFile}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={onFileChange}
+            />
+            <button
+              type="button"
+              className={styles.btn}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? "Uploading..." : "Select & Upload"}
+            </button>
 
-            <button type="button" className={styles.btn} onClick={async () => { setShowUploadsModal(true); await fetchUploadsList(); }}>Select from uploads</button>
+            <button
+              type="button"
+              className={styles.btn}
+              onClick={async () => {
+                setShowUploadsModal(true);
+                await fetchUploadsList();
+              }}
+            >
+              Select from uploads
+            </button>
           </div>
 
           <div className={styles.galleryPreview}>
             {form.gallery.map((g, i) => (
               <div key={i} className={styles.galleryItem}>
-                <img src={getImageUrl(g) || DEV_FALLBACK_IMAGE} alt={`gallery-${i}`} />
-                <div style={{ position: "absolute", left: 8, bottom: 8, display: "flex", gap: 8 }}>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.9)", padding: "4px 6px", borderRadius: 6 }}>
-                    <input type="radio" name="thumbnail" checked={form.thumbnail === g} onChange={() => setThumbnail(g)} />
+                <img
+                  src={getImageUrl(g) || DEV_FALLBACK_IMAGE}
+                  alt={`gallery-${i}`}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 8,
+                    bottom: 8,
+                    display: "flex",
+                    gap: 8,
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: "rgba(255,255,255,0.9)",
+                      padding: "4px 6px",
+                      borderRadius: 6,
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="thumbnail"
+                      checked={form.thumbnail === g}
+                      onChange={() => setThumbnail(g)}
+                    />
                     <span style={{ fontSize: 12 }}>Thumbnail</span>
                   </label>
                 </div>
-                <button type="button" className={styles.removeBtn} onClick={() => removeGalleryItem(i)}>Remove</button>
+                <button
+                  type="button"
+                  className={styles.removeBtn}
+                  onClick={() => removeGalleryItem(i)}
+                >
+                  Remove
+                </button>
               </div>
             ))}
-            {form.gallery.length === 0 && <div className={styles.placeholder}>No images yet.</div>}
+            {form.gallery.length === 0 && (
+              <div className={styles.placeholder}>No images yet.</div>
+            )}
           </div>
         </div>
 
@@ -665,26 +1372,91 @@ export default function ProjectForm() {
         <div className={styles.panels}>
           <div className={styles.panelHeader}>
             <h4>Property Videos (YouTube)</h4>
-            <small>Add YouTube links for walkthroughs / promos. Thumbnails will be shown below.</small>
+            <small>
+              Add YouTube links for walkthroughs / promos. Thumbnails will
+              be shown below.
+            </small>
           </div>
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
-            <input className={styles.input} value={videoUrlText} onChange={(e) => setVideoUrlText(e.target.value)} placeholder="Paste YouTube link or ID" style={{ flex: "1 1 auto" }} />
-            <button type="button" className={styles.btn} onClick={addVideo}>Add Video</button>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              marginBottom: 10,
+            }}
+          >
+            <input
+              className={styles.input}
+              value={videoUrlText}
+              onChange={(e) => setVideoUrlText(e.target.value)}
+              placeholder="Paste YouTube link or ID"
+              style={{ flex: "1 1 auto" }}
+            />
+            <button
+              type="button"
+              className={styles.btn}
+              onClick={addVideo}
+            >
+              Add Video
+            </button>
           </div>
 
           <div className={styles.galleryPreview}>
             {form.videos && form.videos.length > 0 ? (
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
                 {form.videos.map((v, i) => (
-                  <div key={v.id || i} className={`${styles.galleryItem} ${styles.videoItem}`}>
-                    <div style={{ position: "relative", width: "100%", height: 110, overflow: "hidden" }}>
-                      <img className={styles.videoThumb} src={v.thumbnail} alt={`video-${i}`} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`; }} />
-                      <button className={styles.playOverlay} type="button" onClick={() => openVideoPreview(v)} title="Play video">▶</button>
+                  <div
+                    key={v.id || i}
+                    className={`${styles.galleryItem} ${styles.videoItem}`}
+                  >
+                    <div
+                      style={{
+                        position: "relative",
+                        width: "100%",
+                        height: 110,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <img
+                        className={styles.videoThumb}
+                        src={v.thumbnail}
+                        alt={`video-${i}`}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = `https://img.youtube.com/vi/${v.id}/hqdefault.jpg`;
+                        }}
+                      />
+                      <button
+                        className={styles.playOverlay}
+                        type="button"
+                        onClick={() => openVideoPreview(v)}
+                        title="Play video"
+                      >
+                        ▶
+                      </button>
                     </div>
                     <div className={styles.videoControls}>
-                      <button type="button" className={styles.btn} onClick={() => openVideoPreview(v)}>Preview</button>
-                      <button type="button" className={styles.btn} onClick={() => removeVideo(i)}>Remove</button>
+                      <button
+                        type="button"
+                        className={styles.btn}
+                        onClick={() => openVideoPreview(v)}
+                      >
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.btn}
+                        onClick={() => removeVideo(i)}
+                      >
+                        Remove
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -697,157 +1469,338 @@ export default function ProjectForm() {
 
         {/* Developer Info */}
         <div className={styles.panels}>
-          <div className={styles.panelHeader}><h4>Developer Info</h4><small>Pick from existing to autofill or add manually.</small></div>
+          <div className={styles.panelHeader}>
+            <h4>Developer Info</h4>
+            <small>Pick from existing to autofill or add manually.</small>
+          </div>
 
           <div style={{ marginBottom: 12 }}>
-            <label className={styles.formLabel}>Select existing developer</label>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <label className={styles.formLabel}>
+              Select existing developer
+            </label>
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
               <Dropdown
                 id="developer-dropdown"
                 value={developerSelected}
                 onChange={(val) => {
                   setDeveloperSelected(val || "");
-                  if (!val || val === "" || val === "__empty__" || val === "custom") {
+                  if (
+                    !val ||
+                    val === "" ||
+                    val === "__empty__" ||
+                    val === "custom"
+                  ) {
                     setField("developer_name", "");
                     setField("developer_logo", "");
                     setField("developer_description", "");
                     return;
                   }
-                  const d = developersList.find((x) => x.name === val);
+                  const d = developersList.find(
+                    (x) => x.name === val
+                  );
                   if (d) {
                     setField("developer_name", d.name || "");
                     if (d.logo) setField("developer_logo", d.logo);
-                    if (d.description) setField("developer_description", d.description);
+                    if (d.description)
+                      setField("developer_description", d.description);
                   }
                 }}
                 options={[
-                  ...developersList.map((d) => ({ value: d.name, label: d.name })),
-                  { value: "custom", label: "Other / Manual" }
+                  ...developersList.map((d) => ({
+                    value: d.name,
+                    label: d.name,
+                  })),
+                  { value: "custom", label: "Other / Manual" },
                 ]}
                 placeholder="— Select developer —"
                 className="developer-dropdown"
               />
 
-              <button type="button" className={styles.btn} onClick={() => fetchDevelopersList()} title="Refresh list">Refresh</button>
-              <small style={{ color: "var(--muted-2)" }}>or choose "Other / Manual" to type new developer</small>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={() => fetchDevelopersList()}
+                title="Refresh list"
+              >
+                Refresh
+              </button>
+              <small style={{ color: "var(--muted-2)" }}>
+                or choose "Other / Manual" to type new developer
+              </small>
             </div>
           </div>
 
           <div className={styles.grid2}>
             <label className={styles.formLabel}>
               Developer Name
-              <input className={styles.input} value={form.developer_name} onChange={(e) => { setField("developer_name", e.target.value); setDeveloperSelected("custom"); }} placeholder="e.g. ABC Developers" />
+              <input
+                className={styles.input}
+                value={form.developer_name}
+                onChange={(e) => {
+                  setField("developer_name", e.target.value);
+                  setDeveloperSelected("custom");
+                }}
+                placeholder="e.g. ABC Developers"
+              />
             </label>
 
             <label className={styles.formLabel}>
               Developer Logo
               <div className={styles.uploaderRow}>
-                <button type="button" className={styles.btn} onClick={() => devLogoFileRef.current?.click()}>Upload Logo (PNG)</button>
-
-                <button type="button" className={styles.btn} onClick={async () => { developerLogoModeRef.current = true; setShowUploadsModal(true); await fetchUploadsList(); }}>
-                  Select from uploads
+                <button
+                  type="button"
+                  className={styles.btn}
+                  onClick={() => devLogoFileRef.current?.click()}
+                >
+                  Upload Logo (PNG)
                 </button>
 
-                <input className={styles.input} type="text" value={form.developer_logo} onChange={(e) => { setField("developer_logo", e.target.value); setDeveloperSelected("custom"); }} placeholder="or paste image URL (https://...)" style={{ flex: "1 1 auto", minWidth: "220px" }} />
+                <input
+                  className={styles.input}
+                  type="text"
+                  value={form.developer_logo}
+                  onChange={(e) => {
+                    setField("developer_logo", e.target.value);
+                    setDeveloperSelected("custom");
+                  }}
+                  placeholder="or paste image URL (https://...)"
+                  style={{ flex: "1 1 auto", minWidth: "220px" }}
+                />
 
-                <input ref={devLogoFileRef} type="file" accept=".png,image/png" style={{ display: "none" }} onChange={async (e) => {
-                  const files = e.target.files;
-                  if (!files || files.length === 0) return;
-                  const [file] = files;
-                  const isPng = file.type?.toLowerCase() === "image/png" || file.name?.toLowerCase().endsWith(".png");
-                  if (!isPng) {
-                    toast.error("Only PNG files are allowed for the developer logo.");
+                <input
+                  ref={devLogoFileRef}
+                  type="file"
+                  accept=".png,image/png"
+                  style={{ display: "none" }}
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return;
+                    const [file] = files;
+                    const isPng =
+                      file.type?.toLowerCase() === "image/png" ||
+                      file.name?.toLowerCase().endsWith(".png");
+                    if (!isPng) {
+                      toast.error(
+                        "Only PNG files are allowed for the developer logo."
+                      );
+                      e.target.value = null;
+                      return;
+                    }
+                    const uploaded = await uploadFiles([file], {
+                      silent: true,
+                      addToGallery: false,
+                    });
+                    if (uploaded.length) {
+                      setField("developer_logo", uploaded[0]);
+                      toast.success(
+                        "Developer logo uploaded successfully (PNG)"
+                      );
+                    }
+                    setDeveloperSelected("custom");
                     e.target.value = null;
-                    return;
-                  }
-                  const uploaded = await uploadFiles([file], { silent: true, addToGallery: false });
-                  if (uploaded.length) {
-                    setField("developer_logo", uploaded[0]);
-                    toast.success("Developer logo uploaded successfully (PNG)");
-                  }
-                  setDeveloperSelected("custom");
-                  e.target.value = null;
-                }} />
+                  }}
+                />
               </div>
 
               {form.developer_logo && (
                 <div className={styles.developerLogoPreview}>
-                  <img src={getImageUrl(form.developer_logo) || DEV_FALLBACK_IMAGE} alt="Developer Logo" />
-                  <button type="button" className={styles.developerLogoRemove} onClick={() => { setField("developer_logo", ""); setDeveloperSelected("custom"); }}>×</button>
+                  <img
+                    src={
+                      getImageUrl(form.developer_logo) ||
+                      DEV_FALLBACK_IMAGE
+                    }
+                    alt="Developer Logo"
+                  />
+                  <button
+                    type="button"
+                    className={styles.developerLogoRemove}
+                    onClick={() => {
+                      setField("developer_logo", "");
+                      setDeveloperSelected("custom");
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
               )}
             </label>
           </div>
 
-          <label className={styles.formLabel} style={{ gridColumn: "1 / -1" }}>
+          <label
+            className={styles.formLabel}
+            style={{ gridColumn: "1 / -1" }}
+          >
             Developer Description
-            <textarea className={styles.textarea} value={form.developer_description} onChange={(e) => { setField("developer_description", e.target.value); setDeveloperSelected("custom"); }} placeholder="Short developer profile or tagline" />
+            <textarea
+              className={styles.textarea}
+              value={form.developer_description}
+              onChange={(e) => {
+                setField("developer_description", e.target.value);
+                setDeveloperSelected("custom");
+              }}
+              placeholder="Short developer profile or tagline"
+            />
           </label>
         </div>
 
-        {/* metadata */}
+        {/* Metadata + Brochure + Other docs + Contact */}
         <section className={styles.grid2}>
           <label className={styles.formLabel}>
             Blocks
-            <input className={styles.input} value={form.blocks} onChange={(e) => setField("blocks", e.target.value)} placeholder="e.g. A, B, C or 2" />
+            <input
+              className={styles.input}
+              value={form.blocks}
+              onChange={(e) => setField("blocks", e.target.value)}
+              placeholder="e.g. A, B, C or 2"
+            />
           </label>
 
           <label className={styles.formLabel}>
             Units
-            <input className={styles.input} value={form.units} onChange={(e) => setField("units", e.target.value)} placeholder="Total units (number)" />
+            <input
+              className={styles.input}
+              value={form.units}
+              onChange={(e) => setField("units", e.target.value)}
+              placeholder="Total units (number)"
+            />
           </label>
 
           <label className={styles.formLabel}>
             Floors
-            <input className={styles.input} value={form.floors} onChange={(e) => setField("floors", e.target.value)} placeholder="Number of floors" />
+            <input
+              className={styles.input}
+              value={form.floors}
+              onChange={(e) => setField("floors", e.target.value)}
+              placeholder="Number of floors"
+            />
           </label>
 
           <label className={styles.formLabel}>
             Land Area
-            <input className={styles.input} value={form.land_area} onChange={(e) => setField("land_area", e.target.value)} placeholder="What is the land_area" />
+            <input
+              className={styles.input}
+              value={form.land_area}
+              onChange={(e) => setField("land_area", e.target.value)}
+              placeholder="What is the land_area"
+            />
           </label>
 
-          <label className={styles.formLabel}>
-            Brochure URL
-            <input className={styles.input} value={form.brochure_url} onChange={(e) => setField("brochure_url", e.target.value)} placeholder="https://..." />
-          </label>
+          {/* Documents subsection (brochure + other docs) */}
+          <ProjectDocumentsSection
+            form={form}
+            setField={setField}
+            brochureFileRef={brochureFileRef}
+            onUploadBrochure={uploadBrochureFile}
+            docFileRef={docFileRef}
+            docUploading={docUploading}
+            onUploadOtherDocument={uploadOtherDocument}
+            onDeleteOtherDoc={deleteOtherDocument}
+            onConfirmRename={confirmRenameOtherDocument}
+            onOpenPreview={openDocPreview}
+          />
 
-          <label className={styles.formLabel}>
-            Price info (JSON optional)
-            <input className={styles.input} value={form.price_info ? JSON.stringify(form.price_info) : ""} onChange={(e) => { try { setField("price_info", e.target.value ? JSON.parse(e.target.value) : null); } catch {} }} placeholder='e.g. [{"type":"3 BHK","price_min":"1.2 Cr","price_max":"1.6 Cr"}]' />
-          </label>
 
           <label className={styles.formLabel}>
             Contact phone
-            <input className={styles.input} value={form.contact_phone} onChange={(e) => setField("contact_phone", e.target.value)} placeholder="+91..." />
+            <input
+              className={styles.input}
+              value={form.contact_phone}
+              onChange={(e) =>
+                setField("contact_phone", e.target.value)
+              }
+              placeholder="+91..."
+            />
           </label>
 
           <label className={styles.formLabel}>
             Contact email
-            <input className={styles.input} type="email" value={form.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="sales@example.com" />
+            <input
+              className={styles.input}
+              type="email"
+              value={form.contact_email}
+              onChange={(e) =>
+                setField("contact_email", e.target.value)
+              }
+              placeholder="sales@example.com"
+            />
           </label>
         </section>
 
         <div className={styles.formActions}>
-          <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={loading}>{loading ? "Saving..." : "Save Project"}</button>
-          <button type="button" className={styles.btn} onClick={() => navigate("/admin/projects")} disabled={loading}>Cancel</button>
+          <button
+            type="submit"
+            className={`${styles.btn} ${styles.btnPrimary}`}
+            disabled={loading}
+          >
+            {loading ? "Saving..." : "Save Project"}
+          </button>
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={() => navigate("/admin/projects")}
+            disabled={loading}
+          >
+            Cancel
+          </button>
         </div>
       </form>
 
       {/* Uploads modal */}
       {showUploadsModal && (
-        <div className={styles.modalBackdrop} onClick={() => { developerLogoModeRef.current = false; setShowUploadsModal(false); }}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => {
+            developerLogoModeRef.current = false;
+            setShowUploadsModal(false);
+          }}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 8,
+              }}
+            >
               <h3 style={{ margin: 0 }}>Select images from uploads</h3>
               <div style={{ display: "flex", gap: 8 }}>
-                <button className={styles.btn} onClick={() => setSelectedUploads(new Set())}>Clear</button>
-                <button className={styles.btn} onClick={() => { developerLogoModeRef.current = false; setShowUploadsModal(false); }}>Close</button>
+                <button
+                  className={styles.btn}
+                  onClick={() => setSelectedUploads(new Set())}
+                >
+                  Clear
+                </button>
+                <button
+                  className={styles.btn}
+                  onClick={() => {
+                    developerLogoModeRef.current = false;
+                    setShowUploadsModal(false);
+                  }}
+                >
+                  Close
+                </button>
               </div>
             </div>
 
             <div style={{ marginBottom: 10 }}>
-              {uploadsLoading ? <div>Loading images…</div> : uploadsList.length === 0 ? <div style={{ color: "var(--muted-2)" }}>No uploads found on server (endpoint /api/uploads).</div> : null}
+              {uploadsLoading ? (
+                <div>Loading images…</div>
+              ) : uploadsList.length === 0 ? (
+                <div style={{ color: "var(--muted-2)" }}>
+                  No uploads found on server (endpoint /api/uploads).
+                </div>
+              ) : null}
             </div>
 
             <div className={styles.uploadsGrid}>
@@ -855,99 +1808,310 @@ export default function ProjectForm() {
                 const url = u.src;
                 const path = u.path;
                 const inGallery = galleryCanonicalSet.has(path);
-                const isThumbnail = canonicalStoragePath(form.thumbnail || "") === path;
-                const isSelected = inGallery || selectedUploads.has(path);
+                const isThumbnail =
+                  canonicalStoragePath(form.thumbnail || "") === path;
+                const isSelected =
+                  inGallery || selectedUploads.has(path);
                 const disabled = inGallery;
                 return (
-                  <div key={idx} className={`${styles.imageCard} ${disabled ? styles.disabled : ""} ${isSelected ? styles.imageCardSelected : ""}`} onClick={() => { if (!disabled) toggleUploadSelect(path); }} title={disabled ? "Already added to gallery" : isSelected ? "Click to unselect" : "Click to select"}>
-                    <div className={styles.media}><img src={url || DEV_FALLBACK_IMAGE} alt={`upload-${idx}`} /></div>
+                  <div
+                    key={idx}
+                    className={`${styles.imageCard} ${
+                      disabled ? styles.disabled : ""
+                    } ${
+                      isSelected ? styles.imageCardSelected : ""
+                    }`}
+                    onClick={() => {
+                      if (!disabled) toggleUploadSelect(path);
+                    }}
+                    title={
+                      disabled
+                        ? "Already added to gallery"
+                        : isSelected
+                        ? "Click to unselect"
+                        : "Click to select"
+                    }
+                  >
+                    <div className={styles.media}>
+                      <img
+                        src={url || DEV_FALLBACK_IMAGE}
+                        alt={`upload-${idx}`}
+                      />
+                    </div>
                     <div className={styles.meta}>
                       <label className={styles.selectLabel}>
-                        <input type="checkbox" checked={isSelected} onChange={() => { if (!disabled) toggleUploadSelect(path); }} disabled={disabled} />
-                        <span>{disabled ? "In gallery" : "Select"}</span>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (!disabled)
+                              toggleUploadSelect(path);
+                          }}
+                          disabled={disabled}
+                        />
+                        <span>
+                          {disabled ? "In gallery" : "Select"}
+                        </span>
                       </label>
-                      {isThumbnail && <span style={{ fontSize: 12, padding: "4px 8px", background: "var(--accent)", color: "var(--btn-text)", borderRadius: 6 }}>✓ Thumbnail</span>}
+                      {isThumbnail && (
+                        <span
+                          style={{
+                            fontSize: 12,
+                            padding: "4px 8px",
+                            background: "var(--accent)",
+                            color: "var(--btn-text)",
+                            borderRadius: 6,
+                          }}
+                        >
+                          ✓ Thumbnail
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <button className={styles.btn} onClick={() => { developerLogoModeRef.current = false; setShowUploadsModal(false); }}>Cancel</button>
-
-              <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => {
-                const picked = Array.from(selectedUploads || []);
-                if (picked.length === 0) { toast.error("No images selected"); return; }
-
-                if (developerLogoModeRef.current) {
-                  const firstPath = picked[0];
-                  const found = uploadsList.find(x => x.path === firstPath);
-                  if (found) {
-                    setField("developer_logo", found.src);
-                    toast.success("Developer logo set from uploads");
-                  } else {
-                    toast.error("Selected developer logo not found");
-                  }
+            <div
+              style={{
+                marginTop: 12,
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+              }}
+            >
+              <button
+                className={styles.btn}
+                onClick={() => {
                   developerLogoModeRef.current = false;
                   setShowUploadsModal(false);
-                  setSelectedUploads(new Set());
-                  return;
-                }
+                }}
+              >
+                Cancel
+              </button>
 
-                const toAddSrcs = [];
-                const galleryPaths = new Set((form.gallery || []).map(canonicalStoragePath));
-                for (const p of picked) {
-                  if (galleryPaths.has(p)) continue;
-                  const found = uploadsList.find(x => x.path === p);
-                  if (!found) continue;
-                  toAddSrcs.push(found.src);
-                  galleryPaths.add(p);
-                }
-
-                if (toAddSrcs.length === 0) {
-                  toast.error("No new images to add");
-                  setShowUploadsModal(false);
-                  setSelectedUploads(new Set());
-                  return;
-                }
-
-                setForm((s) => {
-                  const combined = [...(s.gallery || []), ...toAddSrcs];
-                  const seen = new Set();
-                  const unique = [];
-                  for (const item of combined) {
-                    const cp = canonicalStoragePath(item);
-                    if (!seen.has(cp)) { seen.add(cp); unique.push(item); }
+              <button
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                onClick={() => {
+                  const picked = Array.from(selectedUploads || []);
+                  if (picked.length === 0) {
+                    toast.error("No images selected");
+                    return;
                   }
-                  const thumbnail = s.thumbnail || unique[0] || "";
-                  return { ...s, gallery: unique, thumbnail };
-                });
 
-                setSelectedUploads(new Set());
-                setShowUploadsModal(false);
-                toast.success(`Added ${toAddSrcs.length} image(s) to gallery`);
-              }} disabled={selectedUploads && selectedUploads.size === 0}>
-                Add selected ({selectedUploads ? selectedUploads.size : 0})
+                  if (developerLogoModeRef.current) {
+                    const firstPath = picked[0];
+                    const found = uploadsList.find(
+                      (x) => x.path === firstPath
+                    );
+                    if (found) {
+                      setField("developer_logo", found.src);
+                      toast.success(
+                        "Developer logo set from uploads"
+                      );
+                    } else {
+                      toast.error("Selected developer logo not found");
+                    }
+                    developerLogoModeRef.current = false;
+                    setShowUploadsModal(false);
+                    setSelectedUploads(new Set());
+                    return;
+                  }
+
+                  const toAddSrcs = [];
+                  const galleryPaths = new Set(
+                    (form.gallery || []).map(canonicalStoragePath)
+                  );
+                  for (const p of picked) {
+                    if (galleryPaths.has(p)) continue;
+                    const found = uploadsList.find(
+                      (x) => x.path === p
+                    );
+                    if (!found) continue;
+                    toAddSrcs.push(found.src);
+                    galleryPaths.add(p);
+                  }
+
+                  if (toAddSrcs.length === 0) {
+                    toast.error("No new images to add");
+                    setShowUploadsModal(false);
+                    setSelectedUploads(new Set());
+                    return;
+                  }
+
+                  setForm((s) => {
+                    const combined = [
+                      ...(s.gallery || []),
+                      ...toAddSrcs,
+                    ];
+                    const seen = new Set();
+                    const unique = [];
+                    for (const item of combined) {
+                      const cp = canonicalStoragePath(item);
+                      if (!seen.has(cp)) {
+                        seen.add(cp);
+                        unique.push(item);
+                      }
+                    }
+                    const thumbnail =
+                      s.thumbnail || unique[0] || "";
+                    return { ...s, gallery: unique, thumbnail };
+                  });
+
+                  setSelectedUploads(new Set());
+                  setShowUploadsModal(false);
+                  toast.success(
+                    `Added ${toAddSrcs.length} image(s) to gallery`
+                  );
+                }}
+                disabled={selectedUploads && selectedUploads.size === 0}
+              >
+                Add selected (
+                {selectedUploads ? selectedUploads.size : 0})
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Video preview modal */}
-      {videoPreviewModal && (
-        <div className={styles.modalBackdrop} onClick={closeVideoPreview}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 900, width: "min(95%, 900px)", padding: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <h3 style={{ margin: 0 }}>Video preview</h3>
+      {/* Other document preview modal */}
+      {docPreview && (
+        <div
+          className={styles.modalBackdrop}
+          onClick={closeDocPreview}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: 900,
+              width: "min(95%, 1200px)",
+              height: "min(95%, 90vh)",
+              padding: 12,
+              overflow:"auto"
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 8,
+              }}
+            >
+              <h3 style={{ margin: 0 }}>
+                {docPreview.name ||
+                  docPreview.original_name ||
+                  "Document preview"}
+              </h3>
               <div>
-                <button className={styles.btn} onClick={closeVideoPreview}>Close</button>
+                <button
+                  className={styles.btn}
+                  onClick={closeDocPreview}
+                >
+                  Close
+                </button>
               </div>
             </div>
 
-            <div style={{ position: "relative", paddingTop: "56.25%", background: "#000" }}>
-              <iframe title="video-preview" src={`https://www.youtube.com/embed/${videoPreviewModal.id}?autoplay=1`} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} />
+            {(docPreview.type || "").startsWith("image/") ? (
+              <div
+                style={{
+                  maxHeight: "60vh",
+                  overflow: "auto",
+                }}
+              >
+                <img
+                  src={docPreview.url}
+                  alt={docPreview.name || "Document"}
+                  style={{
+                    maxWidth: "100%",
+                    height: "auto",
+                    display: "block",
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                style={{
+                  position: "relative",
+                  paddingTop: "80%",
+                  background: "#000",
+                }}
+              >
+                <iframe
+                  title="document-preview"
+                  src={docPreview.url}
+                  frameBorder="0"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Video preview modal */}
+      {videoPreviewModal && (
+        <div
+          className={styles.modalBackdrop}
+          onClick={closeVideoPreview}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: 900,
+              width: "min(95%, 900px)",
+              padding: 12,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 8,
+              }}
+            >
+              <h3 style={{ margin: 0 }}>Video preview</h3>
+              <div>
+                <button
+                  className={styles.btn}
+                  onClick={closeVideoPreview}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div
+              style={{
+                position: "relative",
+                paddingTop: "56.25%",
+                background: "#000",
+              }}
+            >
+              <iframe
+                title="video-preview"
+                src={`https://www.youtube.com/embed/${videoPreviewModal.id}?autoplay=1`}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
             </div>
           </div>
         </div>

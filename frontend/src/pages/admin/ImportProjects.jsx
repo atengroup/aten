@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebaseConfig";
 import styles from "../../assets/pages/admin/ImportProjects.module.css";
+import JSZip from "jszip";
 
 /**
  * DEV_FALLBACK_IMAGE:
@@ -74,6 +75,101 @@ async function makeHeaders() {
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
+// Convert a jpg/jpeg blob to WebP using canvas.
+// If conversion fails, returns the original blob.
+async function convertJpegBlobToWebP(blob, originalName = "image") {
+  const fileLike = new File([blob], originalName, { type: blob.type || "image/jpeg" });
+  const isJpegType =
+    fileLike.type === "image/jpeg" ||
+    fileLike.type === "image/jpg" ||
+    /\.jpe?g$/i.test(fileLike.name || "");
+
+  if (!isJpegType) return { blob, name: originalName };
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    const img = new Image();
+
+    reader.onload = (e) => {
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+
+          if (!canvas.toBlob) {
+            resolve({ blob, name: originalName });
+            return;
+          }
+
+          canvas.toBlob(
+            (webpBlob) => {
+              if (!webpBlob) {
+                resolve({ blob, name: originalName });
+                return;
+              }
+              const newName = originalName.replace(/\.jpe?g$/i, ".webp");
+              resolve({ blob: webpBlob, name: newName });
+            },
+            "image/webp",
+            0.9
+          );
+        } catch (err) {
+          console.error("WebP conversion failed, using original blob", err);
+          resolve({ blob, name: originalName });
+        }
+      };
+
+      img.onerror = () => resolve({ blob, name: originalName });
+      img.src = e.target.result;
+    };
+
+    reader.onerror = () => resolve({ blob, name: originalName });
+    reader.readAsDataURL(fileLike);
+  });
+}
+
+// Take an uploaded ZIP, convert any jpg/jpeg entries to WebP, and return a new ZIP File.
+async function convertZipJpegsToWebP(zipFile) {
+  const buffer = await zipFile.arrayBuffer();
+  const zip = await JSZip.loadAsync(buffer);
+  const newZip = new JSZip();
+
+  const entries = Object.keys(zip.files);
+
+  await Promise.all(
+    entries.map(async (entryName) => {
+      const entry = zip.files[entryName];
+
+      if (entry.dir) {
+        // Preserve folder structure
+        newZip.folder(entryName);
+        return;
+      }
+
+      const isJpegExt = /\.jpe?g$/i.test(entryName);
+      const blob = await entry.async("blob");
+
+      if (!isJpegExt) {
+        // Non-JPEG: copy as-is with original name
+        newZip.file(entryName, blob);
+      } else {
+        // JPEG: convert to WebP and rename extension to .webp
+        const { blob: webpBlob, name: newName } = await convertJpegBlobToWebP(
+          blob,
+          entryName
+        );
+        newZip.file(newName, webpBlob);
+      }
+    })
+  );
+
+  const newBlob = await newZip.generateAsync({ type: "blob" });
+  const newName = zipFile.name.replace(/\.zip$/i, "-webp.zip");
+  return new File([newBlob], newName, { type: "application/zip" });
+}
 
 export default function ImportProjects() {
   const [excelFile, setExcelFile] = useState(null);
@@ -118,39 +214,45 @@ export default function ImportProjects() {
   };
 
   // ---- Import Images ZIP ----
-  const handleImportZip = async (e) => {
-    e.preventDefault();
-    if (!zipFile) {
-      toast.error("Please select a ZIP file first");
-      return;
-    }
+// ---- Import Images ZIP ----
+const handleImportZip = async (e) => {
+  e.preventDefault();
+  if (!zipFile) {
+    toast.error("Please select a ZIP file first");
+    return;
+  }
+
+  setLoadingZip(true);
+
+  try {
+    // NEW: preprocess ZIP → convert all jpg/jpeg images to webp inside it
+    const processedZip = await convertZipJpegsToWebP(zipFile);
 
     const fd = new FormData();
-    fd.append("images_zip", zipFile);
-    setLoadingZip(true);
+    fd.append("images_zip", processedZip);
 
-    try {
-      const headers = await makeHeaders();
-      const res = await fetch(`${BACKEND_BASE}/api/import-images`, {
-        method: "POST",
-        headers,
-        body: fd,
-      });
+    const headers = await makeHeaders();
+    const res = await fetch(`${BACKEND_BASE}/api/import-images`, {
+      method: "POST",
+      headers,
+      body: fd,
+    });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `Server ${res.status}`);
-      }
-      await res.json();
-      toast.success(`Uploaded images successfully!`);
-      navigate("/admin/projects");
-    } catch (err) {
-      console.error("ZIP upload error:", err);
-      toast.error("Image ZIP upload failed: " + (err.message || "error"));
-    } finally {
-      setLoadingZip(false);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Server ${res.status}`);
     }
-  };
+    await res.json();
+    toast.success(`Uploaded images successfully!`);
+    navigate("/admin/projects");
+  } catch (err) {
+    console.error("ZIP upload error:", err);
+    toast.error("Image ZIP upload failed: " + (err.message || "error"));
+  } finally {
+    setLoadingZip(false);
+  }
+};
+
 
   return (
     <div className={styles.importShell}>

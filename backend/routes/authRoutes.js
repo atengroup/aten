@@ -2,45 +2,224 @@
 const express = require("express");
 const supabase = require("../supabase");
 const verifyFirebaseToken = require("../middleware/verifyFirebaseToken");
+const admin = require("../firebaseAdmin");
 
 const router = express.Router();
 
-/**
- * POST /auth
- * verifyFirebaseToken should set req.firebaseUser with fields like:
- *  - uid
- *  - phone_number (optional)
- *  - email (optional)
- *  - name (optional)
- *
- * Additionally we accept phone/email/name in req.body as fallback (client-supplied).
- */
+// In-memory OTP store (replace with Redis in production)
+const otpStore = new Map(); // { email: { otp: "123456", expires: timestamp, sentAt } }
+
+// Helper: Generate 6-digit OTP
+const generateOtp = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
+
+// Helper: Send OTP email (replace with your email service)
+const sendOtpEmail = async (email, otp) => {
+  const nodemailer = require("nodemailer");
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: `"Your App" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Your Login OTP - Valid for 5 minutes",
+    text: `Your OTP is: ${otp}\n\nThis code expires in 5 minutes.`,
+    html: `<p>Your OTP is: <strong>${otp}</strong></p><p>Valid for 5 minutes.</p>`,
+  });
+};
+
+// ---------------------------------------------------------------------
+//  OTP LOGIN ENDPOINTS (PASSWORDLESS LOGIN ONLY, NOT SIGNUP)
+// ---------------------------------------------------------------------
+
+// POST /auth/send-otp  (for LOGIN ONLY)
+router.post("/send-otp", async (req, res) => {
+  try {
+    const { email } = req.body || {};
+
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({ error: "Valid email is required" });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    console.log("[/auth/send-otp] request for:", normalizedEmail);
+
+    // Ensure this is LOGIN only: user must already exist in Firebase
+    try {
+      await admin.auth().getUserByEmail(normalizedEmail);
+    } catch (e) {
+      if (e.code === "auth/user-not-found") {
+        console.log(
+          "[/auth/send-otp] no Firebase user for email:",
+          normalizedEmail
+        );
+        return res
+          .status(404)
+          .json({ error: "No account with this email" });
+      }
+      console.error("[/auth/send-otp] error checking Firebase user:", e);
+      return res.status(500).json({ error: "Internal error" });
+    }
+
+    // Simple rate limiting (disabled in development)
+    const isDev = process.env.NODE_ENV === "development";
+    const record = otpStore.get(normalizedEmail);
+    if (!isDev && record && Date.now() - record.sentAt < 60_000) {
+      console.log(
+        "[/auth/send-otp] rate limited for:",
+        normalizedEmail,
+        "last sent at:",
+        new Date(record.sentAt).toISOString()
+      );
+      return res
+        .status(429)
+        .json({ error: "Too many requests. Try again in 1 minute." });
+    }
+
+    // Generate and store OTP
+    const otp = generateOtp();
+    const expires = Date.now() + 5 * 60 * 1000; // 5 min
+
+    otpStore.set(normalizedEmail, {
+      otp,
+      expires,
+      sentAt: Date.now(),
+    });
+
+    console.log(
+      "[/auth/send-otp] generated OTP for",
+      normalizedEmail,
+      "otp:",
+      otp
+    );
+
+    // Send email
+    await sendOtpEmail(normalizedEmail, otp);
+    console.log("[/auth/send-otp] OTP email sent to", normalizedEmail);
+
+    return res.json({ success: true, message: "OTP sent to email" });
+  } catch (err) {
+    console.error("[/auth/send-otp] unexpected error:", err);
+    return res
+      .status(500)
+      .json({ error: "Failed to send OTP. Try again." });
+  }
+});
+
+// POST /auth/verify-otp  (LOGIN ONLY, returns Firebase custom token)
+router.post("/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ error: "Email and OTP required" });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const record = otpStore.get(normalizedEmail);
+
+  if (!record) {
+    return res.status(400).json({ error: "No OTP requested or expired" });
+  }
+
+  if (Date.now() > record.expires) {
+    otpStore.delete(normalizedEmail);
+    return res.status(400).json({ error: "OTP expired" });
+  }
+
+  if (record.otp !== otp.trim()) {
+    return res.status(400).json({ error: "Invalid OTP" });
+  }
+
+  // OTP valid → delete it
+  otpStore.delete(normalizedEmail);
+
+  try {
+    // LOGIN ONLY: require that a Firebase user exists for this email
+    let userRecord;
+    try {
+      userRecord = await admin.auth().getUserByEmail(normalizedEmail);
+    } catch (e) {
+      if (e.code === "auth/user-not-found") {
+        return res.status(404).json({ error: "No account with this email" });
+      }
+      console.error("getUserByEmail failed in verify-otp:", e);
+      return res.status(500).json({ error: "Authentication failed" });
+    }
+
+    // Custom token tied to the user's Firebase UID
+    const firebaseToken = await admin
+      .auth()
+      .createCustomToken(userRecord.uid, { emailOtp: true });
+
+    // Note: Supabase user creation/updates are handled only in POST /auth below.
+    res.json({ firebaseToken });
+  } catch (err) {
+    console.error("Firebase token creation failed:", err);
+    res.status(500).json({ error: "Authentication failed" });
+  }
+});
+
+// ---------------------------------------------------------------------
+//  MAIN /auth ROUTE
+//  - Used after ANY Firebase sign-in (password, Google, custom token/OTP)
+//  - Enforces email verification for email/password login
+//  - Enforces phone requirement on first time (e.g., Google sign-in)
+//  - At SIGNUP we explicitly allow unverified via allowUnverified flag
+// ---------------------------------------------------------------------
+
 router.post("/", verifyFirebaseToken, async (req, res) => {
   try {
     const firebaseUser = req.firebaseUser || {};
-    const uid = firebaseUser.uid;
-    // token values take precedence; fall back to body values
-    const phone = firebaseUser.phone_number || req.body.phone || null;
+    const uid = firebaseUser.uid || firebaseUser.email; // support OTP login (email as uid, if any)
+    const phoneFromBody = req.body.phone || null;
+    const phone = firebaseUser.phone_number || phoneFromBody || null;
     const email = firebaseUser.email || req.body.email || null;
     const name = firebaseUser.name || req.body.name || null;
 
     if (!uid) {
-      return res.status(400).json({ error: "No uid in token" });
+      return res.status(400).json({ error: "No uid/email in token" });
     }
 
-    // helper: check admin by phone (returns boolean)
+    const signInProvider =
+      firebaseUser.firebase && firebaseUser.firebase.sign_in_provider
+        ? firebaseUser.firebase.sign_in_provider
+        : null;
+
+    // Allow unverified user only when explicitly requested (signup)
+    const allowUnverified = !!req.body.allowUnverified;
+
+    // For provider "password", if email is not verified, block unless allowUnverified is true.
+    if (
+      !allowUnverified &&
+      signInProvider === "password" &&
+      firebaseUser.email &&
+      firebaseUser.email_verified === false
+    ) {
+      return res
+        .status(403)
+        .json({ error: "Email not verified. Please verify your email." });
+    }
+
+    // For OTP login via custom token (provider === "custom"), we treat
+    // possession of the OTP as sufficient and do NOT enforce email_verified.
+
+    // -----------------------------------------------------------------
+    // Helper: check admin by phone
+    // -----------------------------------------------------------------
     const checkAdmin = async (phoneToCheck) => {
       if (!phoneToCheck) return false;
-      const { data: adminRow, error: adminErr } = await supabase
+      const { data } = await supabase
         .from("admin")
         .select("id")
         .eq("phone", phoneToCheck)
         .maybeSingle();
-      if (adminErr) throw adminErr;
-      return !!adminRow;
+      return !!data;
     };
 
-    // helper: finish response (keeps same shape as original)
     const finishResponse = (user, isAdmin) => {
       return res.json({
         success: true,
@@ -55,175 +234,91 @@ router.post("/", verifyFirebaseToken, async (req, res) => {
       });
     };
 
-    // 1) Try find user by uid first
-    const { data: userRowByUid, error: findByUidErr } = await supabase
+    // -----------------------------------------------------------------
+    // 1. Find user by uid (Firebase UID or email-uid)
+    // -----------------------------------------------------------------
+    let { data: user } = await supabase
       .from("users")
       .select("*")
       .eq("uid", uid)
       .maybeSingle();
 
-    if (findByUidErr) {
-      console.error("Supabase error finding user by uid:", findByUidErr);
-      return res.status(500).json({ error: "Database error" });
-    }
-
-    if (userRowByUid) {
-      // Merge any provided fields that are missing in the DB record
+    if (user) {
+      // Existing user: optionally backfill missing data (no hard phone requirement here)
       const updatePayload = {};
-      if (email && !userRowByUid.email) updatePayload.email = email;
-      if (phone && !userRowByUid.phone) updatePayload.phone = phone;
-      if (name && !userRowByUid.name) updatePayload.name = name;
+      if (email && !user.email) updatePayload.email = email;
+      if (phone && !user.phone) updatePayload.phone = phone;
+      if (name && !user.name) updatePayload.name = name;
 
       if (Object.keys(updatePayload).length > 0) {
-        try {
-          const { data: updatedUser, error: updateErr } = await supabase
-            .from("users")
-            .update(updatePayload)
-            .eq("id", userRowByUid.id)
-            .select()
-            .maybeSingle();
-
-          if (updateErr) {
-            // handle unique constraint conflicts gracefully
-            console.warn("Failed to update fields for user by uid:", updateErr);
-          }
-          const isAdmin = await checkAdmin(phone).catch((e) => {
-            console.error("checkAdmin error:", e);
-            throw e;
-          });
-          return finishResponse(updatedUser || userRowByUid, isAdmin);
-        } catch (e) {
-          console.error("Error updating userRowByUid:", e);
-          return res.status(500).json({ error: "Database error" });
-        }
-      } else {
-        const isAdmin = await checkAdmin(phone).catch((e) => {
-          console.error("checkAdmin error:", e);
-          throw e;
-        });
-        return finishResponse(userRowByUid, isAdmin);
+        const { data: updated } = await supabase
+          .from("users")
+          .update(updatePayload)
+          .eq("id", user.id)
+          .select()
+          .single();
+        user = updated || user;
       }
+
+      const isAdmin = await checkAdmin(phone || user.phone);
+      return finishResponse(user, isAdmin);
     }
 
-    // 2) Not found by uid: try find by email (if email exists)
+    // -----------------------------------------------------------------
+    // 2. Not found by uid → try by email
+    // -----------------------------------------------------------------
     if (email) {
-      const { data: userByEmail, error: findByEmailErr } = await supabase
+      const { data: byEmail } = await supabase
         .from("users")
         .select("*")
         .eq("email", email)
         .maybeSingle();
 
-      if (findByEmailErr) {
-        console.error("Supabase error finding user by email:", findByEmailErr);
-        return res.status(500).json({ error: "Database error" });
-      }
-
-      if (userByEmail) {
-        // Link this existing email account to the uid and set phone/name if provided
-        try {
-          const updatePayload = { uid };
-          if (phone && !userByEmail.phone) updatePayload.phone = phone;
-          if (name && !userByEmail.name) updatePayload.name = name;
-
-          const { data: updatedUser, error: updateErr } = await supabase
-            .from("users")
-            .update(updatePayload)
-            .eq("id", userByEmail.id)
-            .select()
-            .maybeSingle();
-
-          if (updateErr) console.warn("Failed to update uid on userByEmail:", updateErr);
-
-          const isAdmin = await checkAdmin(phone).catch((e) => {
-            console.error("checkAdmin error:", e);
-            throw e;
-          });
-
-          const resultUser = updatedUser || { ...userByEmail, uid, phone: userByEmail.phone || phone, name: userByEmail.name || name, email: userByEmail.email };
-          return finishResponse(resultUser, isAdmin);
-        } catch (e) {
-          console.error("Error updating userByEmail:", e);
-          return res.status(500).json({ error: "Database error" });
-        }
+      if (byEmail) {
+        // User exists by email; update with uid/phone/name
+        const { data: updated } = await supabase
+          .from("users")
+          .update({
+            uid,
+            phone: phone || byEmail.phone,
+            name: name || byEmail.name,
+          })
+          .eq("id", byEmail.id)
+          .select()
+          .single();
+        const isAdmin = await checkAdmin(phone || byEmail.phone);
+        return finishResponse(updated || byEmail, isAdmin);
       }
     }
 
-    // 3) Not found by uid or email: try find by phone (if phone exists)
-    if (phone) {
-      const { data: userByPhone, error: findByPhoneErr } = await supabase
-        .from("users")
-        .select("*")
-        .eq("phone", phone)
-        .maybeSingle();
-
-      if (findByPhoneErr) {
-        console.error("Supabase error finding user by phone:", findByPhoneErr);
-        return res.status(500).json({ error: "Database error" });
-      }
-
-      if (userByPhone) {
-        // Update this row to add uid and possibly email/name
-        try {
-          const updatePayload = { uid };
-          if (email && !userByPhone.email) updatePayload.email = email;
-          if (name && !userByPhone.name) updatePayload.name = name;
-
-          const { data: updatedUser, error: updateErr } = await supabase
-            .from("users")
-            .update(updatePayload)
-            .eq("id", userByPhone.id)
-            .select()
-            .maybeSingle();
-
-          if (updateErr) console.warn("Failed to update uid on userByPhone:", updateErr);
-
-          const isAdmin = await checkAdmin(phone).catch((e) => {
-            console.error("checkAdmin error:", e);
-            throw e;
-          });
-
-          const resultUser = updatedUser || { ...userByPhone, uid, email: userByPhone.email || email, name: userByPhone.name || name };
-          return finishResponse(resultUser, isAdmin);
-        } catch (e) {
-          console.error("Error updating userByPhone:", e);
-          return res.status(500).json({ error: "Database error" });
-        }
-      }
+    // -----------------------------------------------------------------
+    // 3. Not found → create new user
+    //    - REQUIRE phone number for first-time creation.
+    //    - This is what will enforce "must add phone" for Google sign-in,
+    //      OTP-first sign-in, etc.
+    // -----------------------------------------------------------------
+    if (!phone) {
+      return res
+        .status(400)
+        .json({ error: "Phone number is required to complete sign in." });
     }
 
-    // 4) No existing user found by uid/email/phone -> create a new user row
-    try {
-      const insertObj = { uid, name: name || null, phone: phone || null, email: email || null };
+    const { data: inserted, error } = await supabase
+      .from("users")
+      .insert([{ uid, email, phone, name }])
+      .select()
+      .single();
 
-      const { data: inserted, error: insertErr } = await supabase
-        .from("users")
-        .insert([insertObj])
-        .select()
-        .maybeSingle();
-
-      if (insertErr) {
-        console.error("Supabase error inserting user:", insertErr);
-
-        // Unique constraint conflict handling: return 409 with helpful message
-        // Supabase returns a string in insertErr.message often; we try to detect unique violation keywords
-        const errMsg = insertErr?.message || String(insertErr);
-        if (errMsg.toLowerCase().includes("unique") || errMsg.toLowerCase().includes("duplicate")) {
-          return res.status(409).json({ error: "Email or phone already exists" });
-        }
-
-        return res.status(500).json({ error: "Database error" });
+    if (error) {
+      if (error.message && error.message.toLowerCase().includes("duplicate")) {
+        return res.status(409).json({ error: "Email or phone already exists" });
       }
-
-      const newUser = inserted || { id: null, uid, name: name || null, phone: phone || null, email: email || null };
-      const isAdmin = await checkAdmin(phone).catch((e) => {
-        console.error("checkAdmin error:", e);
-        throw e;
-      });
-      return finishResponse(newUser, isAdmin);
-    } catch (e) {
-      console.error("Error inserting new user:", e);
-      return res.status(500).json({ error: "Database error" });
+      console.error("Supabase insert error in /auth:", error);
+      return res.status(500).json({ error: "Failed to create user" });
     }
+
+    const isAdmin = await checkAdmin(phone);
+    return finishResponse(inserted, isAdmin);
   } catch (err) {
     console.error("/auth error:", err);
     res.status(500).json({ error: "Internal server error" });

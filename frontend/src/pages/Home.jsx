@@ -10,7 +10,7 @@ const BACKEND_BASE =
     ? "http://localhost:5000"
     : "");
 
-const DEV_TEST_FALLBACK = "/mnt/data/5e09c9d2-abc3-4ff4-b971-e555efa5c499.png";
+const DEV_TEST_FALLBACK = "/atenlogo.png";
 
 const homeTypes = [
   {

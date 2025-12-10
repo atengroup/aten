@@ -2,13 +2,8 @@
 import React, { useEffect, useState } from "react";
 import {
   getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  sendEmailVerification,
-  updateProfile,
-  deleteUser,
   signOut,
+  deleteUser,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithCustomToken,
@@ -47,12 +42,11 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
   const [mode, setMode] = useState("signup"); // "signup" | "signin"
   const [loading, setLoading] = useState(false);
 
-  // Signin method: password or email OTP
-  const [loginMethod, setLoginMethod] = useState("password"); // "password" | "otp"
+  // OTP state
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
 
-  // Phone requirement for first-time sign in (Google / OTP / password)
+  // Phone requirement for first-time sign in (Google / OTP)
   const [phoneRequired, setPhoneRequired] = useState(false);
   const [pendingUserForPhone, setPendingUserForPhone] = useState(null);
 
@@ -60,7 +54,6 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
   useEffect(() => {
     return () => {
@@ -84,7 +77,6 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
   }
 
   // persist local and notify backend; handles conflict by deleting firebase user when required
-  // extraPayload lets us pass allowUnverified:true for signup
   async function persistAndFinish(firebaseUser, phoneToSave, extraPayload = {}) {
     const idToken = await firebaseUser.getIdToken(true);
 
@@ -135,8 +127,12 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
     // success: persist locally (auth_token set by backend exchange below via loginWithFirebaseIdToken)
     try {
       localStorage.setItem("auth_token", idToken);
-      if (firebaseUser.displayName)
+      if (firebaseUser.displayName) {
         localStorage.setItem("login_name", firebaseUser.displayName);
+      } else if (name) {
+        // fallback if displayName not set for OTP users
+        localStorage.setItem("login_name", name);
+      }
       const finalPhone = firebaseUser.phoneNumber || phoneToSave || "";
       if (finalPhone) {
         localStorage.setItem("customer_phone", finalPhone);
@@ -151,7 +147,7 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
       const emailToPass = firebaseUser.email || email || null;
       await loginWithFirebaseIdToken(
         idToken,
-        firebaseUser.displayName || null,
+        firebaseUser.displayName || name || null,
         emailToPass
       );
     } catch (e) {
@@ -199,112 +195,35 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
     }
   }
 
-  // ----------------- Signup (email + password + verification link) -----------------
-  async function handleSignUp() {
-    const em = String(email || "").trim();
-    const pw = String(password || "");
-    const nm = String(name || "").trim();
-    const phRaw = String(phone || "").trim();
-
-    if (!nm) return toast.error("Name is required");
-    if (!phRaw) return toast.error("Phone is required");
-    if (!isLikelyIndianPhone(phRaw))
-      return toast.error("Phone must be a 10-digit Indian number");
-    if (!em) return toast.error("Email is required");
-    if (!pw || pw.length < 6)
-      return toast.error("Password must be at least 6 characters");
-
-    const normalizedPhone = normalizePhone(phRaw);
-    setLoading(true);
-
-    try {
-      const res = await createUserWithEmailAndPassword(auth, em, pw);
-      const firebaseUser = res.user;
-
-      // update displayName
-      try {
-        await updateProfile(firebaseUser, { displayName: nm });
-      } catch (e) {
-        console.warn("updateProfile failed:", e);
-      }
-
-      // Save unverified user in Supabase (allowUnverified:true)
-      try {
-        await persistAndFinish(firebaseUser, normalizedPhone, {
-          allowUnverified: true,
-        });
-      } catch (err) {
-        console.error("persistAndFinish during signup failed:", err);
-        toast.error(err?.message || "Sign up failed");
-        // Do not continue if backend rejected (duplicate, etc.)
-        return;
-      }
-
-      // send email verification link
-      try {
-        await sendEmailVerification(firebaseUser);
-        toast.success("Verification email sent. Please check your inbox.");
-      } catch (e) {
-        console.error("sendEmailVerification failed:", e);
-        toast.error(
-          "Account created, but failed to send verification email. Please try again later."
-        );
-      }
-
-      // sign out, user must verify and then sign in
-      try {
-        await signOut(auth);
-      } catch (e) {
-        console.warn("signOut after signup failed:", e);
-      }
-
-      // Keep the modal open, switch to Sign In tab
-      setMode("signin");
-      setLoginMethod("password");
-      setPassword(""); // clear password field, keep email/phone
-
-      toast.success(
-        "Account created. After verifying your email, sign in with the same email and password."
-      );
-    } catch (e) {
-      console.error("createUserWithEmailAndPassword failed:", e);
-      toast.error(e?.message || "Sign up failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // ----------------- Password Signin -----------------
-  async function handleSignInPassword() {
-    const em = String(email || "").trim();
-    const pw = String(password || "");
-    if (!em) return toast.error("Enter email");
-    if (!pw) return toast.error("Enter password");
-
-    setLoading(true);
-    try {
-      const res = await signInWithEmailAndPassword(auth, em, pw);
-      const firebaseUser = res.user;
-      // phone already stored at signup for email/password users
-      await finishLogin(firebaseUser, null);
-    } catch (e) {
-      console.error("signIn failed:", e);
-      toast.error("Sign in failed. Invalid credentials");
-      setLoading(false);
-    }
-  }
-
-  // ----------------- Email OTP (passwordless) Signin -----------------
+  // ----------------- Email OTP (passwordless) Send OTP -----------------
   async function handleSendOtp() {
     const em = String(email || "").trim();
     if (!em) return toast.error("Enter email to receive OTP");
+
+    const payload = { email: em };
+
+    if (mode === "signup") {
+      const nm = String(name || "").trim();
+      const phRaw = String(phone || "").trim();
+
+      if (!nm) return toast.error("Name is required");
+      if (!phRaw) return toast.error("Phone is required");
+      if (!isLikelyIndianPhone(phRaw))
+        return toast.error("Phone must be a 10-digit Indian number");
+
+      payload.name = nm;
+      payload.phone = normalizePhone(phRaw);
+      payload.intent = "signup";
+    } else {
+      payload.intent = "signin";
+    }
 
     setLoading(true);
     try {
       const res = await fetch(backendPath("/auth/send-otp"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: em }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -321,18 +240,41 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
     }
   }
 
-  async function handleSignInWithOtp() {
+  // ----------------- Email OTP (passwordless) Verify & Login/Signup -----------------
+  async function handleVerifyOtp() {
     const em = String(email || "").trim();
     const code = String(otp || "").trim();
     if (!em) return toast.error("Enter email");
     if (!code) return toast.error("Enter OTP");
+
+    const payload = { email: em, otp: code };
+
+    let phoneOverride = null;
+
+    if (mode === "signup") {
+      const nm = String(name || "").trim();
+      const phRaw = String(phone || "").trim();
+
+      if (!nm) return toast.error("Name is required");
+      if (!phRaw) return toast.error("Phone is required");
+      if (!isLikelyIndianPhone(phRaw))
+        return toast.error("Phone must be a 10-digit Indian number");
+
+      const normalized = normalizePhone(phRaw);
+      payload.name = nm;
+      payload.phone = normalized;
+      payload.intent = "signup";
+      phoneOverride = normalized;
+    } else {
+      payload.intent = "signin";
+    }
 
     setLoading(true);
     try {
       const res = await fetch(backendPath("/auth/verify-otp"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: em, otp: code }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -346,7 +288,7 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
       const cred = await signInWithCustomToken(auth, firebaseToken);
       const firebaseUser = cred.user;
 
-      await finishLogin(firebaseUser, null);
+      await finishLogin(firebaseUser, phoneOverride);
     } catch (e) {
       console.error("Email OTP signin failed:", e);
       toast.error(e?.message || "Sign in with OTP failed");
@@ -374,23 +316,7 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
     setPendingUserForPhone(null);
   }
 
-  // ----------------- Reset Password (email/password users) -----------------
-  async function handleReset() {
-    const em = String(email || "").trim();
-    if (!em) return toast.error("Enter email to reset");
-    setLoading(true);
-    try {
-      await sendPasswordResetEmail(auth, em);
-      toast.success("Password reset email sent");
-    } catch (e) {
-      console.error("sendPasswordResetEmail failed:", e);
-      toast.error(e?.message || "Failed to send reset email");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // ----------------- Google Signin (requires phone on first time) -----------------
+  // ----------------- Google Signin (passwordless, doubles as signup) -----------------
   async function handleGoogleSignIn() {
     setLoading(true);
     try {
@@ -430,7 +356,6 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
             <button
               onClick={() => {
                 setMode("signup");
-                setLoginMethod("password");
                 setOtp("");
                 setOtpSent(false);
               }}
@@ -445,7 +370,6 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
             <button
               onClick={() => {
                 setMode("signin");
-                setLoginMethod("password");
                 setOtp("");
                 setOtpSent(false);
               }}
@@ -458,7 +382,7 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
             </button>
           </div>
 
-          {/* SIGN UP MODE */}
+          {/* SIGN UP MODE: passwordless (OTP + Google) */}
           {mode === "signup" && (
             <>
               <input
@@ -491,35 +415,50 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
                 autoComplete="email"
               />
 
-              <input
-                id="password"
-                className="name-input"
-                placeholder="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-              />
+              {otpSent && (
+                <input
+                  id="otp"
+                  className="name-input"
+                  placeholder="Enter OTP sent to your email"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  inputMode="numeric"
+                />
+              )}
 
-              <button
-                className={styles.sendBtn}
-                onClick={handleSignUp}
-                disabled={loading}
-                type="button"
-              >
-                {loading ? "Creating..." : "Create account"}
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                {!otpSent && (
+                  <button
+                    className={styles.sendBtn}
+                    onClick={handleSendOtp}
+                    disabled={loading}
+                    type="button"
+                  >
+                    {loading ? "Sending OTP..." : "Send OTP"}
+                  </button>
+                )}
+                {otpSent && (
+                  <button
+                    className={styles.sendBtn}
+                    onClick={handleVerifyOtp}
+                    disabled={loading}
+                    type="button"
+                  >
+                    {loading ? "Verifying..." : "Verify & Continue"}
+                  </button>
+                )}
+              </div>
 
               <div style={{ marginTop: 8 }}>
                 <small>
-                  We will send a verification link to your email. Please verify
-                  before signing in.
+                  No password required. We will verify your email with a
+                  one-time OTP and create your account.
                 </small>
               </div>
             </>
           )}
 
-          {/* SIGN IN MODE */}
+          {/* SIGN IN MODE: passwordless (OTP + Google) */}
           {mode === "signin" && (
             <>
               <input
@@ -531,111 +470,46 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
                 autoComplete="email"
               />
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginTop: 8,
-                  marginBottom: 8,
-                }}
-              >
-                <button
-                  type="button"
-                  className={`${styles.authBtn} ${
-                    loginMethod === "password" ? styles.active : ""
-                  }`}
-                  onClick={() => {
-                    setLoginMethod("password");
-                    setOtp("");
-                    setOtpSent(false);
-                  }}
-                >
-                  Password login
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.authBtn} ${
-                    loginMethod === "otp" ? styles.active : ""
-                  }`}
-                  onClick={() => {
-                    setLoginMethod("otp");
-                    setPassword("");
-                  }}
-                >
-                  Email OTP login
-                </button>
+              {otpSent && (
+                <input
+                  id="otp-signin"
+                  className="name-input"
+                  placeholder="Enter OTP sent to your email"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  inputMode="numeric"
+                />
+              )}
+
+              <div style={{ display: "flex", gap: 8 }}>
+                {!otpSent && (
+                  <button
+                    className={styles.sendBtn}
+                    onClick={handleSendOtp}
+                    disabled={loading}
+                    type="button"
+                  >
+                    {loading ? "Sending OTP..." : "Send OTP"}
+                  </button>
+                )}
+                {otpSent && (
+                  <button
+                    className={styles.sendBtn}
+                    onClick={handleVerifyOtp}
+                    disabled={loading}
+                    type="button"
+                  >
+                    {loading ? "Signing in..." : "Sign in with OTP"}
+                  </button>
+                )}
               </div>
 
-              {loginMethod === "password" && (
-                <>
-                  <input
-                    id="password"
-                    className="name-input"
-                    placeholder="Password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                  />
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      className={styles.sendBtn}
-                      onClick={handleSignInPassword}
-                      disabled={loading}
-                      type="button"
-                    >
-                      {loading ? "Signing in..." : "Sign In"}
-                    </button>
-                    <button
-                      className={styles.secondaryBtn}
-                      onClick={handleReset}
-                      disabled={loading}
-                      type="button"
-                    >
-                      Forgot?
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {loginMethod === "otp" && (
-                <>
-                  {otpSent && (
-                    <input
-                      id="otp"
-                      className="name-input"
-                      placeholder="Enter OTP sent to your email"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      inputMode="numeric"
-                    />
-                  )}
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {!otpSent && (
-                      <button
-                        className={styles.sendBtn}
-                        onClick={handleSendOtp}
-                        disabled={loading}
-                        type="button"
-                      >
-                        {loading ? "Sending OTP..." : "Send OTP"}
-                      </button>
-                    )}
-                    {otpSent && (
-                      <button
-                        className={styles.sendBtn}
-                        onClick={handleSignInWithOtp}
-                        disabled={loading}
-                        type="button"
-                      >
-                        {loading ? "Signing in..." : "Sign in with OTP"}
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
+              <div style={{ marginTop: 8 }}>
+                <small>
+                  Enter the OTP we send to your email to sign in. No password,
+                  ever.
+                </small>
+              </div>
             </>
           )}
 
@@ -685,9 +559,9 @@ export default function EmailLoginModal({ onClose, onSuccess }) {
 
           <div style={{ marginTop: 12 }}>
             <small>
-              By creating an account you agree to provide a valid phone number.
-              Passwords are stored securely by Firebase. You can sign in using a
-              password or one-time OTP sent to your email.
+              This is a completely passwordless login. You can sign in using a
+              one-time OTP sent to your email or with Google. By creating an
+              account you agree to provide a valid phone number if required.
             </small>
           </div>
         </div>

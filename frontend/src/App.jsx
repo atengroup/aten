@@ -24,6 +24,7 @@ import WardrobeEnquiry from "./pages/WardrobeEnquiry.jsx";
 import CustomEnquiry from "./pages/CustomEnquiries.jsx";
 import ScrollToTop from "./ScrollToTop.jsx";
 import Engineering from "./pages/Engineering.jsx";
+import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton.jsx";
 
 export default function App() {
   return (
@@ -70,6 +71,7 @@ export default function App() {
 
         <Footer />
       </div>
+       <WhatsAppFloatingButton />
     </Router>
     </>
   );

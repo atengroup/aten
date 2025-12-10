@@ -96,33 +96,20 @@ export default function Engineering() {
   // NEW: Portfolio projects
   const portfolioProjects = [
     {
-      title: "G+2 Independent Residence",
-      type: "RCC framed structure",
+      title: "Industrial Warehouse",
+      type: "Steel framed",
       location: "Kolkata, West Bengal",
       scope: "Concept + structural design + drawings",
-      image: "/portfolio/independent-house-g2.webp",
+      image: "/eng/eng1 (4).webp",
     },
     {
-      title: "Small Apartment Block",
-      type: "Residential apartments",
+      title: "Silo",
+      type: "Steel framed",
       location: "Durgapur, West Bengal",
       scope: "Column layout + slab/beam design",
-      image: "/portfolio/apartment-block.webp",
+      image: "/eng/eng1 (1).webp",
     },
-    {
-      title: "Light Industrial Shed",
-      type: "Steel frame shed",
-      location: "Howrah, West Bengal",
-      scope: "Framing, bracing and footing design",
-      image: "/portfolio/industrial-shed.webp",
-    },
-    {
-      title: "Mixed-Use Corner Building",
-      type: "Shops + upper-floor residence",
-      location: "Suburban site",
-      scope: "Structural planning + drawings",
-      image: "/portfolio/mixed-use-building.webp",
-    },
+   
   ];
 
   return (
